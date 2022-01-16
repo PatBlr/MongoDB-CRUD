@@ -49,15 +49,15 @@ class DBConnector:
         except Exception as e:
             raise DBExceptions.ConnectionFailure(e)
 
-    def find(self, collection, filter, projection):
+    def find(self, collection, filter_string, projection):
         ret = []
         try:
-            result = self.db[collection].find(filter, projection)
+            result = self.db[collection].find(filter_string, projection)
             for x in result:
                ret.append(x)
         except Exception as e:
             print(e)
-        return str(ret)
+        return ret
 
     def check_connection(self):
         try:
