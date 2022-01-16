@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
                                         pos=[550, 100], text="Field:", color="grey")
             self.obj[label_select.objectName()] = label_select
             # list widget containing the clicked field
-            lw_select = create_list(widget=self, obj_name="lw_select", font=self.font, size=[200, 60],
+            lw_select = create_list(widget=self, obj_name="lw_select", font=self.font, size=[200, 30],
                                     pos=[550, 130], horizontal=True)
             self.obj[lw_select.objectName()] = lw_select
             # combobox containing all possible options for comparison
@@ -151,9 +151,9 @@ class MainWindow(QMainWindow):
                 update_combo(widget=self, obj_name="combo_projection", enabled=True,items=self.projections,
                              stditem="Projection: (include)", checkable=True)
             # TODO
-            # lw_select = self.obj["lw_select"]
+            lw_select = self.obj["lw_select"]
             # lw_select.horizontalScrollBar().updateGeometry()
-            # print("is visible:", lw_select.horizontalScrollBar().isVisible())
+            print("is visible:", lw_select.horizontalScrollBar().isVisible())
 
     def on_connect(self):
         # pyqtSlot for button_connect
