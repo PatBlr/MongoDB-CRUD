@@ -1,10 +1,9 @@
 import sys
 import json
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QTreeWidgetItem, QListWidget, QListWidgetItem, QScrollBar,
-                             QVBoxLayout, QWidget, QTabWidget, QTextBrowser)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QTreeWidgetItem)
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt, QRect, QEvent
+from PyQt5.QtCore import Qt, QEvent
 import DBExceptions
 from Create import (create_label, update_label, create_inputbox, update_inputbox, create_button, update_button,
                     create_combo, update_combo, create_textbox, update_textbox, create_tree, update_tree, create_list,
@@ -19,16 +18,19 @@ class MainWindow(QMainWindow):
         self.width = 1400
         self.height = 810
         self.setWindowTitle('MongoDB Query Generator')
-        self.options = {
-            "does not equal": "$ne",
-            "equals": "$eq",
-            "greater than": "$gt",
-            "less than": "$lt",
-            "greater or equal": "$gte",
-            "less or equal": "$lte",
-            "in": "$in",
-            "not in": "$nin"
-        }
+        self.options = [
+            "does not equal",
+            "equals",
+            "greater than",
+            "less than",
+            "greater or equal",
+            "less or equal",
+            "in",
+            "not in",
+            "contains",
+            "starts with",
+            "ends with"
+        ]
         self.projections = {}
         self.font = QFont()
         self.font_disabled = self.font
@@ -101,12 +103,12 @@ class MainWindow(QMainWindow):
                                      tabs=["Query", "Result"], enabled=False)
             self.obj[tabview.objectName()] = tabview
             # display for generated query - pos is relative to the tabview - (-1) removes visible border
-            tb_query = create_textbox(widget=self.obj["tab_query"], obj_name="tb_query", font=self.font, size=[800, 300],
-                                      pos=[-1, -1], enabled=True)
+            tb_query = create_textbox(widget=self.obj["tab_query"], obj_name="tb_query", font=self.font,
+                                      size=[800, 275], pos=[-1, -1], enabled=True)
             self.obj[tb_query.objectName()] = tb_query
             # display for results - pos is relative to the tabview - (-1) removes visible border
-            tb_result = create_textbox(widget=self.obj["tab_result"], obj_name="tb_result", font=self.font, size=[800, 300],
-                                       pos=[-1, -1], enabled=True)
+            tb_result = create_textbox(widget=self.obj["tab_result"], obj_name="tb_result", font=self.font,
+                                       size=[800, 275], pos=[-1, -1], enabled=True)
             self.obj[tb_result.objectName()] = tb_result
 
         except Exception as e:
@@ -148,7 +150,7 @@ class MainWindow(QMainWindow):
                 update_list(widget=self, obj_name="lw_select", clear=True, items=[collection, name])
                 update_label(widget=self, obj_name="label_type", text=type_name+":")
                 self.fill_projections(self.possible_projections(collection))
-                update_combo(widget=self, obj_name="combo_projection", enabled=True,items=self.projections,
+                update_combo(widget=self, obj_name="combo_projection", enabled=True, items=self.projections,
                              stditem="Projection: (include)", checkable=True)
             # TODO
             lw_select = self.obj["lw_select"]
@@ -211,6 +213,33 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(e)
 
+    def on_find(self):
+        update_textbox(widget=self, obj_name="tb_result", text="")
+        option = self.obj["combo_select"].currentText()
+        if self.obj["lw_select"].count() > 0:
+            if option in self.options:
+                collection = self.obj["lw_select"].item(0).text()
+                field = self.obj["lw_select"].item(1).text()
+                field_type = self.connector.get_types()[collection][field]
+                text = self.obj["ib_select"].text()
+                try:
+                    q = QueryGenerator(field, field_type, option, text, self.projections,
+                                       self.connector.get_types()[collection])
+                    query_str = f"db.{collection}.find({q.generate_string()})"
+                    query = q.generate_query()
+                    update_textbox(widget=self, obj_name="tb_query", text=query_str)
+                    result = self.connector.find(collection, query[0], query[1])
+                    print(type(result))
+                    for x in result:
+                        text = json.dumps(x, indent=4, sort_keys=False)
+                        self.obj["tb_result"].append(text)
+                except Exception as e:
+                    update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
+            else:
+                update_textbox(widget=self, obj_name="tb_query", text="No option selected", color="red")
+        else:
+            update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
+
     def rec_fill_subitem(self, item, collection, entries, types, i=""):
         for key in entries:
             if isinstance(entries[key], dict):
@@ -232,29 +261,6 @@ class MainWindow(QMainWindow):
         self.projections.clear()
         for projection in projections:
             self.projections[projection] = 1
-
-    def on_find(self):
-        option = self.obj["combo_select"].currentText()
-        if self.obj["lw_select"].count() > 0:
-            if option in self.options:
-                collection = self.obj["lw_select"].item(0).text()
-                field = self.obj["lw_select"].item(1).text()
-                field_type = self.connector.get_types()[collection][field]
-                text = self.obj["ib_select"].text()
-                comp = self.options[option]
-                try:
-                    q = QueryGenerator(field, field_type, comp, text, self.projections, self.connector.get_types()[collection])
-                    query_str = f"db.{collection}.find({q.generate_string()})"
-                    query = q.generate_query()
-                    update_textbox(widget=self, obj_name="tb_query", text=query_str)
-                    result = self.connector.find(collection, query[0], query[1])
-                    update_textbox(widget=self, obj_name="tb_result", text=result)
-                except Exception as e:
-                    print(e)
-            else:
-                update_textbox(widget=self, obj_name="tb_query", text="No option selected", color="red")
-        else:
-            update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
 
     def closeEvent(self, a0: QtGui.QCloseEvent):
         self.connector.close()
