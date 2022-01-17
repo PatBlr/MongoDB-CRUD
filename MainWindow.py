@@ -1,7 +1,7 @@
 import sys
 import json
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QTreeWidgetItem, QScrollArea, QWidget, QPushButton)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QTreeWidgetItem, QScrollArea, QWidget, QPushButton, QGridLayout)
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QEvent
 import DBExceptions
@@ -72,17 +72,19 @@ class MainWindow(QMainWindow):
             box_select = QWidget(self)
             box_select.move(550, 100)
             box_select.resize(700, 0)
-            box_select.setStyleSheet("border-width: 5px; border-color: lightblue;")
+            #box_select.setStyleSheet("border-width: 5px; border-color: lightblue;")
+
+            box_layout = QGridLayout(box_select)
 
             scroll = QScrollArea(self)
             scroll.setWidget(box_select)
             scroll.move(550,100)
             scroll.resize(800,250)
 
-            self.add_selection(widget=box_select, start=100*self.selection_fields)
+            self.add_selection(widget=box_select, start=100*self.selection_fields, layout=box_layout)
 
             add = QPushButton(self)
-            add.clicked.connect(lambda: self.add_selection(widget=box_select, start=100*self.selection_fields))
+            add.clicked.connect(lambda: self.add_selection(widget=box_select, start=100*self.selection_fields, layout=box_layout))
 
 
 
@@ -259,6 +261,7 @@ class MainWindow(QMainWindow):
 
     def check_scrollbar(self):
         sender = self.sender().parent().parent().objectName()
+        print(sender)
         if self.sender().minimum() != self.sender().maximum():
             update_list(widget=self, obj_name=sender, size=[200, 60])
         else:
@@ -275,7 +278,7 @@ class MainWindow(QMainWindow):
             else:
                 QTreeWidgetItem(item, [key, types[collection][i+key]])
 
-    def add_selection(self, widget, start):
+    def add_selection(self, widget, start, layout):
         # label indicator for the select field
         label_select = create_label(widget=widget, obj_name=f"label_select{self.selection_fields}", font=self.font, size=[400, 30],
                                     pos=[10, start+1], text="Field:", color="grey")
@@ -286,7 +289,7 @@ class MainWindow(QMainWindow):
         self.obj[lw_select.objectName()] = lw_select
         # combobox containing all possible options for comparison
         combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.selection_fields}", font=self.font, size=[200, 30],
-                                    pos=[250, start+30], enabled=False, stditem="Options:")
+                                    pos=[250, start+30], enabled=True, stditem="Options:", items=self.options)
         self.obj[combo_select.objectName()] = combo_select
         # label indicator for the type of the selected field
         label_type = create_label(widget=widget, obj_name=f"label_type{self.selection_fields}", font=self.font, size=[400, 30],
@@ -296,8 +299,14 @@ class MainWindow(QMainWindow):
         ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.selection_fields}", font=self.font, size=[200, 30],
                                     pos=[570, start+30], enabled=False)
         self.obj[ib_select.objectName()] = ib_select
-
         widget.resize(widget.width(), widget.height()+100)
+
+        layout.addWidget(label_select, self.selection_fields, 0)
+        layout.addWidget(lw_select, self.selection_fields, 1)
+        layout.addWidget(combo_select, self.selection_fields, 2)
+        layout.addWidget(label_type, self.selection_fields, 3)
+        layout.addWidget(ib_select, self.selection_fields, 4)
+
         self.selection_fields += 1
 
 
