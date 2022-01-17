@@ -1,5 +1,4 @@
 from bson import ObjectId
-from datetime import datetime
 import DBExceptions
 
 
@@ -61,12 +60,10 @@ class QueryGenerator:
 
     def resolve_comp(self, comp_string):
         comp = self.options[comp_string]["name"]
-        #print("comp", comp)
         return comp
 
     def resolve_argument(self, comp_string, text):
         argument = self.options[comp_string]["argument"]
-        #print("argument", argument.format(argument=text))
         return argument.format(argument=text)
 
     def resolve_type(self):
@@ -95,4 +92,3 @@ class QueryGenerator:
                 self.parsed_text = ObjectId(self.text)
             except ValueError:
                 raise DBExceptions.UnexpectedValue("expected ObjectId")
-

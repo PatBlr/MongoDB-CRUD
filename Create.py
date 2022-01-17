@@ -67,7 +67,6 @@ def update_inputbox(widget, obj_name, font=None, text=None, size=None, pos=None,
 
 
 def create_button(widget, obj_name, font, size, pos, text, color="black", enabled=True):
-    check_prerequisites(widget)
     button = QPushButton(text, widget)
     button.setObjectName(obj_name)
     update_pos(button, pos)
@@ -187,7 +186,6 @@ def update_textbox(widget, obj_name, font=None, size=None, pos=None, text=None, 
 
 
 def create_tree(widget, obj_name, font, size, pos, headers, color="black", enabled=False):
-    check_prerequisites(widget)
     tree = QTreeWidget(widget)
     tree.setObjectName(obj_name)
     tree.setFont(font)
@@ -228,7 +226,6 @@ def update_tree(widget, obj_name, font=None, size=None, pos=None, headers=None, 
 
 def create_list(widget, obj_name, font, size, pos, color="black", enabled=False, horizontal=False,
                 scroll_always_on=False):
-    check_prerequisites(widget)
     lw = QListWidget(widget)
     lw.setObjectName(obj_name)
     lw.setFont(font)
@@ -280,7 +277,6 @@ def update_list(widget, obj_name, font=None, size=None, pos=None, color=None, en
 
 
 def create_tabview(widget, obj_name, size, pos, tabs, enabled=False):
-    check_prerequisites(widget)
     tv = QTabWidget(widget)
     tv.setObjectName(obj_name)
     update_size(tv, size)

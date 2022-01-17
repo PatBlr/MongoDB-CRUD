@@ -1,7 +1,7 @@
 import sys
 import json
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QTreeWidgetItem)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QTreeWidgetItem, QScrollArea, QWidget, QPushButton)
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QEvent
 import DBExceptions
@@ -32,6 +32,7 @@ class MainWindow(QMainWindow):
             "ends with"
         ]
         self.projections = {}
+        self.selection_fields = 0
         self.font = QFont()
         self.font_disabled = self.font
         self.font.setPointSize(9)
@@ -67,26 +68,44 @@ class MainWindow(QMainWindow):
                                pos=[10, 100], headers=["Name", "Type"])
             tree.itemDoubleClicked.connect(self.on_item_selected)
             self.obj[tree.objectName()] = tree
-            # label indicator for the select field
-            label_select = create_label(widget=self, obj_name="label_select", font=self.font, size=[400, 30],
-                                        pos=[550, 100], text="Field:", color="grey")
-            self.obj[label_select.objectName()] = label_select
-            # list widget containing the clicked field
-            lw_select = create_list(widget=self, obj_name="lw_select", font=self.font, size=[200, 30],
-                                    pos=[550, 130], horizontal=True)
-            self.obj[lw_select.objectName()] = lw_select
-            # combobox containing all possible options for comparison
-            combo_select = create_combo(widget=self, obj_name="combo_select", font=self.font, size=[200, 30],
-                                        pos=[770, 130], enabled=False, stditem="Options:")
-            self.obj[combo_select.objectName()] = combo_select
-            # label indicator for the type of the selected field
-            label_type = create_label(widget=self, obj_name="label_type", font=self.font, size=[400, 30],
-                                      pos=[990, 130], text="type:", color="grey")
-            self.obj[label_type.objectName()] = label_type
-            # inputbox for the comparison string
-            ib_select = create_inputbox(widget=self, obj_name="ib_select", font=self.font, size=[200, 30],
-                                        pos=[1050, 130], enabled=False)
-            self.obj[ib_select.objectName()] = ib_select
+
+            box_select = QWidget(self)
+            box_select.move(550, 100)
+            box_select.resize(700, 0)
+            box_select.setStyleSheet("border-width: 5px; border-color: lightblue;")
+
+            scroll = QScrollArea(self)
+            scroll.setWidget(box_select)
+            scroll.move(550,100)
+            scroll.resize(800,250)
+
+            self.add_selection(widget=box_select, start=100*self.selection_fields)
+
+            add = QPushButton(self)
+            add.clicked.connect(lambda: self.add_selection(widget=box_select, start=100*self.selection_fields))
+
+
+
+            # # label indicator for the select field
+            # label_select = create_label(widget=self, obj_name="label_select", font=self.font, size=[400, 30],
+            #                             pos=[550, 100], text="Field:", color="grey")
+            # self.obj[label_select.objectName()] = label_select
+            # # list widget containing the clicked field
+            # lw_select = create_list(widget=self, obj_name="lw_select", font=self.font, size=[200, 30],
+            #                         pos=[550, 130], horizontal=True)
+            # self.obj[lw_select.objectName()] = lw_select
+            # # combobox containing all possible options for comparison
+            # combo_select = create_combo(widget=self, obj_name="combo_select", font=self.font, size=[200, 30],
+            #                             pos=[770, 130], enabled=False, stditem="Options:")
+            # self.obj[combo_select.objectName()] = combo_select
+            # # label indicator for the type of the selected field
+            # label_type = create_label(widget=self, obj_name="label_type", font=self.font, size=[400, 30],
+            #                           pos=[990, 130], text="type:", color="grey")
+            # self.obj[label_type.objectName()] = label_type
+            # # inputbox for the comparison string
+            # ib_select = create_inputbox(widget=self, obj_name="ib_select", font=self.font, size=[200, 30],
+            #                             pos=[1050, 130], enabled=False)
+            # self.obj[ib_select.objectName()] = ib_select
             # TODO
             button_find = create_button(widget=self, obj_name="button_find", font=self.font, size=[100, 30],
                                         pos=[550, 460], color="grey", text="Find", enabled=False)
@@ -110,6 +129,8 @@ class MainWindow(QMainWindow):
             tb_result = create_textbox(widget=self.obj["tab_result"], obj_name="tb_result", font=self.font,
                                        size=[800, 275], pos=[-1, -1], enabled=True)
             self.obj[tb_result.objectName()] = tb_result
+
+            # lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
 
         except Exception as e:
             print(e, "init_ui")
@@ -152,10 +173,6 @@ class MainWindow(QMainWindow):
                 self.fill_projections(self.possible_projections(collection))
                 update_combo(widget=self, obj_name="combo_projection", enabled=True, items=self.projections,
                              stditem="Projection: (include)", checkable=True)
-            # TODO
-            lw_select = self.obj["lw_select"]
-            # lw_select.horizontalScrollBar().updateGeometry()
-            print("is visible:", lw_select.horizontalScrollBar().isVisible())
 
     def on_connect(self):
         # pyqtSlot for button_connect
@@ -240,6 +257,13 @@ class MainWindow(QMainWindow):
         else:
             update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
 
+    def check_scrollbar(self):
+        sender = self.sender().parent().parent().objectName()
+        if self.sender().minimum() != self.sender().maximum():
+            update_list(widget=self, obj_name=sender, size=[200, 60])
+        else:
+            update_list(widget=self, obj_name=sender, size=[200, 30])
+
     def rec_fill_subitem(self, item, collection, entries, types, i=""):
         for key in entries:
             if isinstance(entries[key], dict):
@@ -250,6 +274,32 @@ class MainWindow(QMainWindow):
                 i = tmp
             else:
                 QTreeWidgetItem(item, [key, types[collection][i+key]])
+
+    def add_selection(self, widget, start):
+        # label indicator for the select field
+        label_select = create_label(widget=widget, obj_name=f"label_select{self.selection_fields}", font=self.font, size=[400, 30],
+                                    pos=[10, start+1], text="Field:", color="grey")
+        self.obj[label_select.objectName()] = label_select
+        # list widget containing the clicked field
+        lw_select = create_list(widget=widget, obj_name=f"lw_select{self.selection_fields}", font=self.font, size=[200, 30],
+                                pos=[10, start+30], horizontal=True)
+        self.obj[lw_select.objectName()] = lw_select
+        # combobox containing all possible options for comparison
+        combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.selection_fields}", font=self.font, size=[200, 30],
+                                    pos=[250, start+30], enabled=False, stditem="Options:")
+        self.obj[combo_select.objectName()] = combo_select
+        # label indicator for the type of the selected field
+        label_type = create_label(widget=widget, obj_name=f"label_type{self.selection_fields}", font=self.font, size=[400, 30],
+                                  pos=[500, start+30], text="type:", color="grey")
+        self.obj[label_type.objectName()] = label_type
+        # inputbox for the comparison string
+        ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.selection_fields}", font=self.font, size=[200, 30],
+                                    pos=[570, start+30], enabled=False)
+        self.obj[ib_select.objectName()] = ib_select
+
+        widget.resize(widget.width(), widget.height()+100)
+        self.selection_fields += 1
+
 
     def possible_projections(self, collection):
         projections = []
