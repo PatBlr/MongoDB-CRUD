@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
             "ends with"
         ]
         self.projections = {}
-        self.selection_fields = 0
+        self.amount_statements = 0
         self.font = QFont()
         self.font_disabled = self.font
         self.font.setPointSize(9)
@@ -71,26 +71,20 @@ class MainWindow(QMainWindow):
             self.obj[tree.objectName()] = tree
 
             box_select = QWidget(self)
-            box_select.move(550, 100)
-            box_select.resize(700, 0)
+            box_select.resize(770, 0)
+            # box_select.setStyleSheet("background-color: blue")
 
             box_layout = QGridLayout(box_select)
-            box_layout.setRowMinimumHeight(0,0)
-            box_layout.setRowStretch(0, 0)
 
             scroll = QScrollArea(self)
             scroll.setWidget(box_select)
             scroll.move(550, 100)
             scroll.resize(800, 250)
             scroll.setFrameShape(QFrame.NoFrame)
+            # scroll.setStyleSheet("background-color: white")
 
-            self.add_selection(widget=box_select, start=100*self.selection_fields, layout=box_layout)
-
-            add = QPushButton(self)
-            add.setText("add")
-            add.move(700, 460)
-            add.clicked.connect(lambda: self.add_selection(widget=box_select, start=100*self.selection_fields, layout=box_layout))
-
+            self.add_dialog_buttons(widget=box_select, layout=box_layout)
+            self.add_statement(widget=box_select, start=100 * self.amount_statements, layout=box_layout)
 
             # TODO
             button_find = create_button(widget=self, obj_name="button_find", font=self.font, size=[100, 30],
@@ -99,7 +93,8 @@ class MainWindow(QMainWindow):
             self.obj[button_find.objectName()] = button_find
             # TODO
             combo_projection = create_combo(widget=self, obj_name="combo_projection", font=self.font, size=[200, 30],
-                                            pos=[550, 400], enabled=False, checkable=True, stditem="Projection: (include)")
+                                            pos=[550, 400], enabled=False, checkable=True,
+                                            stditem="Projection: (include)")
             combo_projection.view().pressed.connect(self.on_projection_clicked)
             combo_projection.installEventFilter(self)
             self.obj[combo_projection.objectName()] = combo_projection
@@ -116,16 +111,13 @@ class MainWindow(QMainWindow):
                                        size=[800, 275], pos=[-1, -1], enabled=True)
             self.obj[tb_result.objectName()] = tb_result
 
-            # lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
-
         except Exception as e:
             print(e, "init_ui")
 
     def eventFilter(self, target, event):
-        # filter Mousewheel on combo_projection and just return - prevents scrolling on combobox
-        if target == self.obj["combo_projection"] or target == self.obj["combo_dbs"]:
-            if event.type() == QEvent.Wheel:
-                return True
+        # filter Mousewheel on target - prevents scrolling on combobox
+        if event.type() == QEvent.Wheel:
+            return True
         return False
 
     def on_projection_clicked(self, index):
@@ -155,8 +147,8 @@ class MainWindow(QMainWindow):
                 parent = parent.parent()
             if type_name != "":
                 # TODO - lw select und label type aendern
-                update_list(widget=self, obj_name=f"lw_select{0}", clear=True, items=[collection, name])
-                update_label(widget=self, obj_name=f"label_type{0}", text=type_name+":")
+                update_list(widget=self, obj_name=f"lw_select{self.amount_statements}", clear=True, items=[collection, name])
+                update_label(widget=self, obj_name=f"label_type{self.amount_statements}", text=type_name + ":")
                 self.fill_projections(self.possible_projections(collection))
                 update_combo(widget=self, obj_name="combo_projection", enabled=True, items=self.projections,
                              stditem="Projection: (include)", checkable=True)
@@ -177,12 +169,13 @@ class MainWindow(QMainWindow):
             update_combo(widget=self, obj_name="combo_dbs", items=self.connector.get_list_dbs(), enabled=True)
             update_tree(widget=self, obj_name="tree", enabled=True)
             # TODO - von hier
-            update_label(widget=self, obj_name=f"label_select0", color="black")
-            update_list(widget=self, obj_name=f"lw_select0", enabled=True)
-            update_combo(widget=self, obj_name=f"combo_select0", items=self.options, enabled=True, stditem="Options:")
-            update_label(widget=self, obj_name=f"label_type0", color="black")
-            update_inputbox(widget=self, obj_name=f"ib_select0", enabled=True)
-            # TODO - bis hier die 0 umaendern
+            update_label(widget=self, obj_name=f"label_select1", color="black")
+            update_list(widget=self, obj_name=f"lw_select1", enabled=True)
+            update_combo(widget=self, obj_name=f"combo_select1", items=self.options, enabled=True, stditem="Options:")
+            update_label(widget=self, obj_name=f"label_type1", color="black")
+            update_inputbox(widget=self, obj_name=f"ib_select1", enabled=True)
+            # TODO - bis hier die 1 umaendern ???
+            update_button(widget=self, obj_name="button_add", enabled=True)
             update_combo(widget=self, obj_name="combo_projection", enabled=True, stditem="Projection: (include)")
             update_button(widget=self, obj_name="button_find", enabled=True, color="black")
             update_tabview(widget=self, obj_name="tabview", enabled=True)
@@ -198,7 +191,7 @@ class MainWindow(QMainWindow):
         # TODO: Refactor Exceptions
         # clear UI
         self.obj["tree"].clear()
-        for i in range(0, self.selection_fields):
+        for i in range(1, self.amount_statements):
             self.obj[f"lw_select{i}"].clear()
             self.obj[f"combo_select{i}"].setCurrentIndex(0)
             self.obj[f"ib_select{i}"].clear()
@@ -248,12 +241,12 @@ class MainWindow(QMainWindow):
             update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
 
     def check_scrollbar(self):
-        sender = self.sender().parent().parent().objectName()
-        print(sender)
+        # can't check visibility by itself, so this is a makeshift solution
+        sender = self.sender().parent().parent()
         if self.sender().minimum() != self.sender().maximum():
-            update_list(widget=self, obj_name=sender, size=[200, 60])
+            sender.setMaximumSize(1000, 50)
         else:
-            update_list(widget=self, obj_name=sender, size=[200, 30])
+            sender.setMaximumSize(1000, 26)
 
     def rec_fill_subitem(self, item, collection, entries, types, i=""):
         for key in entries:
@@ -266,37 +259,98 @@ class MainWindow(QMainWindow):
             else:
                 QTreeWidgetItem(item, [key, types[collection][i+key]])
 
-    def add_selection(self, widget, start, layout):
-        # label indicator for the select field
-        label_select = create_label(widget=widget, obj_name=f"label_select{self.selection_fields}", font=self.font, size=[400, 30],
-                                    pos=[10, start+1], text="Field:", color="grey")
-        self.obj[label_select.objectName()] = label_select
-        # list widget containing the clicked field
-        lw_select = create_list(widget=widget, obj_name=f"lw_select{self.selection_fields}", font=self.font, size=[200, 30],
-                                pos=[10, start+30], horizontal=True)
-        self.obj[lw_select.objectName()] = lw_select
-        # combobox containing all possible options for comparison
-        combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.selection_fields}", font=self.font, size=[200, 30],
-                                    pos=[250, start+30], enabled=False, stditem="Options:", items=self.options)
-        self.obj[combo_select.objectName()] = combo_select
-        # label indicator for the type of the selected field
-        label_type = create_label(widget=widget, obj_name=f"label_type{self.selection_fields}", font=self.font, size=[400, 30],
-                                  pos=[500, start+30], text="type:", color="grey")
-        self.obj[label_type.objectName()] = label_type
-        # inputbox for the comparison string
-        ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.selection_fields}", font=self.font, size=[200, 30],
-                                    pos=[570, start+30], enabled=False)
-        self.obj[ib_select.objectName()] = ib_select
-        widget.resize(widget.width(), widget.height()+100)
+    def add_dialog_buttons(self, widget, layout):
+        button_add = create_button(widget=widget, obj_name="button_add", text="Add Statement", font=self.font,
+                                   size=[200, 30], pos=[150, widget.height()-30], enabled=False)
+        button_add.clicked.connect(lambda: self.add_statement(widget=widget, start=100 * self.amount_statements, layout=layout,
+                                                              enabled=True))
+        self.obj[button_add.objectName()] = button_add
+        button_del = create_button(widget=widget, obj_name="button_del", text="Remove last Statement", font=self.font,
+                                   size=[200, 30], pos=[350, widget.height()-30])
+        button_del.clicked.connect(lambda: self.remove_last_statement(widget=widget))
+        self.obj[button_del.objectName()] = button_del
 
-        layout.addWidget(label_select, self.selection_fields, 0)
-        layout.addWidget(lw_select, self.selection_fields, 1)
-        layout.addWidget(combo_select, self.selection_fields, 2)
-        layout.addWidget(label_type, self.selection_fields, 3)
-        layout.addWidget(ib_select, self.selection_fields, 4)
+    def add_statement(self, widget, start, layout, enabled=False):
+        if self.amount_statements > 0:
+            if self.obj[f"lw_select{self.amount_statements}"].count() == 0:
+                error = "Please specify Field before adding new and / or Statement"
+                update_textbox(widget=self, obj_name="tb_query", text=error, color="red")
+                return
+            if self.obj[f"combo_select{self.amount_statements}"].currentText() not in self.options:
+                error = "Please specify Option before adding new and / or Statement"
+                update_textbox(widget=self, obj_name="tb_query", text=error, color="red")
+                return
+        if self.amount_statements > 1:
+            if self.obj[f"combo_clause{self.amount_statements}"].currentText() not in ["and", "or"]:
+                error = "Please specify Clause before adding new and / or Statement"
+                update_textbox(widget=self, obj_name="tb_query", text=error, color="red")
+                return
+        self.amount_statements += 1
+        try:
+            color = "black" if enabled else "grey"
 
-        self.selection_fields += 1
+            if self.amount_statements > 1:
+                combo_clause = create_combo(widget=widget, obj_name=f"combo_clause{self.amount_statements}", font=self.font,
+                                            size=[0, 0], pos=[0, 0], stditem="Clause:", items=["and", "or"],
+                                            enabled=True)
+                layout.addWidget(combo_clause, self.amount_statements, 0, Qt.AlignTop)
+                self.obj[combo_clause.objectName()] = combo_clause
+            # label indicator for the select field
+            label_select = create_label(widget=widget, obj_name=f"label_select{self.amount_statements}", font=self.font, size=[400, 30],
+                                        pos=[10, start+1], text="Field:", color=color, enabled=enabled)
+            layout.addWidget(label_select, self.amount_statements, 1, Qt.AlignTop)
+            self.obj[label_select.objectName()] = label_select
+            # list widget containing the clicked field
+            lw_select = create_list(widget=widget, obj_name=f"lw_select{self.amount_statements}", font=self.font, size=[200, 30],
+                                    pos=[10, start+30], horizontal=True, enabled=enabled)
+            lw_select.setMaximumSize(1000, 26)
+            lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
+            layout.addWidget(lw_select, self.amount_statements, 2, Qt.AlignTop)
+            self.obj[lw_select.objectName()] = lw_select
+            # combobox containing all possible options for comparison
+            combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.amount_statements}", font=self.font, size=[200, 30],
+                                        pos=[250, start+30], enabled=enabled, stditem="Options:", items=self.options)
+            combo_select.installEventFilter(self)
+            layout.addWidget(combo_select, self.amount_statements, 3, Qt.AlignTop)
+            self.obj[combo_select.objectName()] = combo_select
+            # label indicator for the type of the selected field
+            label_type = create_label(widget=widget, obj_name=f"label_type{self.amount_statements}", font=self.font, size=[400, 30],
+                                      pos=[500, start+30], text="type:", color=color, enabled=enabled)
+            layout.addWidget(label_type, self.amount_statements, 4, Qt.AlignTop)
+            self.obj[label_type.objectName()] = label_type
+            # inputbox for the comparison string
+            ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.amount_statements}", font=self.font, size=[200, 30],
+                                        pos=[570, start+30], enabled=enabled)
+            layout.addWidget(ib_select, self.amount_statements, 5, Qt.AlignTop)
+            self.obj[ib_select.objectName()] = ib_select
+            widget.resize(widget.width(), widget.height()+100)
 
+            update_button(widget=self,obj_name="button_add", pos=[150, widget.height()-30])
+            update_button(widget=self,obj_name="button_del", pos=[350, widget.height()-30], enabled=enabled)
+        except Exception as e:
+            update_textbox(widget=self, obj_name="tb_query", text=e, color="red")
+            self.amount_statements -= 1
+
+    def remove_last_statement(self, widget):
+        if not self.amount_statements == 1:
+            to_delete = [f"ib_select{self.amount_statements}",
+                         f"label_select{self.amount_statements}",
+                         f"combo_select{self.amount_statements}",
+                         f"lw_select{self.amount_statements}",
+                         f"label_type{self.amount_statements}",
+                         f"combo_clause{self.amount_statements}"]
+            print(to_delete)
+            self.remove_widgets(to_delete)
+            self.amount_statements -= 1
+            widget.resize(widget.width(), widget.height()-100)
+            update_button(widget=self, obj_name="button_add", pos=[150, widget.height() - 30])
+            enabled = True if self.amount_statements > 1 else False
+            update_button(widget=self, obj_name="button_del", pos=[350, widget.height() - 30], enabled=enabled)
+
+    def remove_widgets(self, widgets):
+        for widget in widgets:
+            self.obj[widget].setParent(None)
+            del self.obj[widget]
 
     def possible_projections(self, collection):
         projections = []
@@ -311,6 +365,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, a0: QtGui.QCloseEvent):
         self.connector.close()
+
 
 def main():
     app = QApplication(sys.argv)
