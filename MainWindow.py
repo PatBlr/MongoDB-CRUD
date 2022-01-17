@@ -10,7 +10,7 @@ from Create import (create_label, update_label, create_inputbox, update_inputbox
                     update_list, create_tabview, update_tabview)
 from DBConnector import DBConnector
 from QueryGenerator import QueryGenerator
-
+from bson import json_util
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -229,7 +229,7 @@ class MainWindow(QMainWindow):
                     result = self.connector.find(collection, query[0], query[1])
                     print(type(result))
                     for x in result:
-                        text = json.dumps(x, indent=4, sort_keys=False)
+                        text = json_util.dumps(x, indent=4, sort_keys=False)
                         self.obj["tb_result"].append(text)
                 except Exception as e:
                     update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
