@@ -74,6 +74,7 @@ class MainWindow(QMainWindow):
             # list widget containing the clicked field
             lw_select = create_list(widget=self, obj_name="lw_select", font=self.font, size=[200, 30],
                                     pos=[550, 130], horizontal=True)
+            lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
             self.obj[lw_select.objectName()] = lw_select
             # combobox containing all possible options for comparison
             combo_select = create_combo(widget=self, obj_name="combo_select", font=self.font, size=[200, 30],
@@ -94,7 +95,8 @@ class MainWindow(QMainWindow):
             self.obj[button_find.objectName()] = button_find
             # TODO
             combo_projection = create_combo(widget=self, obj_name="combo_projection", font=self.font, size=[200, 30],
-                                            pos=[550, 400], enabled=False, checkable=True, stditem="Projection: (include)")
+                                            pos=[550, 400], enabled=False, checkable=True,
+                                            stditem="Projection: (include)")
             combo_projection.view().pressed.connect(self.on_projection_clicked)
             combo_projection.installEventFilter(self)
             self.obj[combo_projection.objectName()] = combo_projection
@@ -152,10 +154,6 @@ class MainWindow(QMainWindow):
                 self.fill_projections(self.possible_projections(collection))
                 update_combo(widget=self, obj_name="combo_projection", enabled=True, items=self.projections,
                              stditem="Projection: (include)", checkable=True)
-            # TODO
-            lw_select = self.obj["lw_select"]
-            # lw_select.horizontalScrollBar().updateGeometry()
-            print("is visible:", lw_select.horizontalScrollBar().isVisible())
 
     def on_connect(self):
         # pyqtSlot for button_connect
@@ -240,6 +238,13 @@ class MainWindow(QMainWindow):
         else:
             update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
 
+    def check_scrollbar(self):
+        sender = self.sender().parent().parent().objectName()
+        if self.sender().minimum() != self.sender().maximum():
+            update_list(widget=self, obj_name=sender, size=[200, 60])
+        else:
+            update_list(widget=self, obj_name=sender, size=[200, 30])
+
     def rec_fill_subitem(self, item, collection, entries, types, i=""):
         for key in entries:
             if isinstance(entries[key], dict):
@@ -264,6 +269,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, a0: QtGui.QCloseEvent):
         self.connector.close()
+
 
 def main():
     app = QApplication(sys.argv)

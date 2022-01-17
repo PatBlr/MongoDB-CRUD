@@ -54,7 +54,7 @@ class DBConnector:
         try:
             result = self.db[collection].find(filter_string, projection)
             for x in result:
-               ret.append(x)
+                ret.append(x)
         except Exception as e:
             print(e)
         return ret
@@ -86,16 +86,14 @@ class DBConnector:
             # fill new dict with field name and type of field as string
             if doc is not None:
                 for key in doc:
-                    # TODO:
                     # doc[key] is the actual field in the document, key is just the name
                     self.types[f"{collection}"][f"{key}"] = f"{type(doc[key]).__name__}"
                     # if key is a dict: add sub-items to self.types with dot Notation
-                    if isinstance(doc[key],dict):
+                    if isinstance(doc[key], dict):
                         entries = self.rec_dict_search(doc[key])
                         # entries = self.get_dict_entries(collection, key)
                         for entry in entries:
                             self.types[f"{collection}"][f"{key}.{entry}"] = f"{entries[entry]}"
-        #print(self.types)
 
     def rec_dict_search(self, doc, init_string="", res=None):
         # unsauber, vielleicht nochmal ueberarbeiten
