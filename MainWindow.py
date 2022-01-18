@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt, QEvent
 import DBExceptions
 from Create import (create_label, update_label, create_inputbox, update_inputbox, create_button, update_button,
                     create_combo, update_combo, create_textbox, update_textbox, create_tree, update_tree, create_list,
-                    update_list, create_tabview, update_tabview)
+                    update_list, create_tabview, update_tabview, create_scrollarea)
 from DBConnector import DBConnector
 from QueryGenerator import QueryGenerator
 
@@ -76,12 +76,8 @@ class MainWindow(QMainWindow):
 
             box_layout = QGridLayout(box_select)
 
-            scroll = QScrollArea(self)
-            scroll.setWidget(box_select)
-            scroll.move(550, 100)
-            scroll.resize(800, 250)
-            scroll.setFrameShape(QFrame.NoFrame)
-            # scroll.setStyleSheet("background-color: white")
+            create_scrollarea(widget=self, child=box_select, size=[800, 250], pos=[550, 100])
+            # scrollarea.setStyleSheet("background-color: white")
 
             self.add_dialog_buttons(widget=box_select, layout=box_layout)
             self.add_statement(widget=box_select, start=100 * self.amount_statements, layout=box_layout)
@@ -214,31 +210,58 @@ class MainWindow(QMainWindow):
             print(e)
 
     def on_find(self):
-        update_textbox(widget=self, obj_name="tb_result", text="")
-        option = self.obj["combo_select"].currentText()
-        if self.obj["lw_select"].count() > 0:
-            if option in self.options:
-                collection = self.obj["lw_select"].item(0).text()
-                field = self.obj["lw_select"].item(1).text()
-                field_type = self.connector.get_types()[collection][field]
-                text = self.obj["ib_select"].text()
-                try:
-                    q = QueryGenerator(field, field_type, option, text, self.projections,
-                                       self.connector.get_types()[collection])
-                    query_str = f"db.{collection}.find({q.generate_string()})"
-                    query = q.generate_query()
-                    update_textbox(widget=self, obj_name="tb_query", text=query_str)
-                    result = self.connector.find(collection, query[0], query[1])
-                    print(type(result))
-                    for x in result:
-                        text = json.dumps(x, indent=4, sort_keys=False)
-                        self.obj["tb_result"].append(text)
-                except Exception as e:
-                    update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
-            else:
-                update_textbox(widget=self, obj_name="tb_query", text="No option selected", color="red")
-        else:
-            update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
+        statements = {}
+        statement = []
+        try:
+            for i in range(1, self.amount_statements+1):
+                if self.obj[f"lw_select{i}"].count() < 2:
+                    update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
+                    return
+                if self.obj[f"combo_select{i}"].currentText() not in self.options:
+                    update_textbox(widget=self, obj_name="tb_query", text="No option selected", color="red")
+                    return
+                if i > 1 and self.obj[f"combo_clause{i}"].currentText() not in ["and", "or"]:
+                    update_textbox(widget=self, obj_name="tb_query", text="No clause selected", color="red")
+                    return
+                statement = {"collection": self.obj[f"lw_select{i}"].item(0).text(),
+                             "field": self.obj[f"lw_select{i}"].item(1).text(),
+                             "option": self.obj[f"combo_select{i}"].currentText(),
+                             "text": self.obj[f"ib_select{i}"].text(),
+                             }
+                statement["expected_type"] = self.connector.get_types()[statement["collection"]][statement["field"]]
+                clause = self.obj[f"combo_clause{i}"].currentText() if i > 1 else ""
+                statement["clause"] = clause
+                statements[f"statement{i}"] = statement
+            q = QueryGenerator(statements, self.connector.get_types()[statement["collection"]], self.projections)
+
+
+        except Exception as e:
+            print(e)
+        # update_textbox(widget=self, obj_name="tb_result", text="")
+        # option = self.obj["combo_select"].currentText()
+        # if self.obj["lw_select"].count() > 0:
+        #     if option in self.options:
+        #         collection = self.obj["lw_select"].item(0).text()
+        #         field = self.obj["lw_select"].item(1).text()
+        #         field_type = self.connector.get_types()[collection][field]
+        #         text = self.obj["ib_select"].text()
+        #         try:
+        #             q = QueryGenerator(field, field_type, option, text, self.projections,
+        #                                self.connector.get_types()[collection])
+        #             query_str = f"db.{collection}.find({q.generate_string()})"
+        #             query = q.generate_query()
+        #             update_textbox(widget=self, obj_name="tb_query", text=query_str)
+        #             result = self.connector.find(collection, query[0], query[1])
+        #             print(type(result))
+        #             for x in result:
+        #                 text = json.dumps(x, indent=4, sort_keys=False)
+        #                 self.obj["tb_result"].append(text)
+        #         except Exception as e:
+        #             update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
+        #     else:
+        #         update_textbox(widget=self, obj_name="tb_query", text="No option selected", color="red")
+        # else:
+        #     update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
 
     def check_scrollbar(self):
         # can't check visibility by itself, so this is a makeshift solution
