@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QPushButton, QComboBox, QTextBrowser, QTreeWidget, QHeaderView,
-                             QListWidget, QTabWidget, QWidget)
+                             QListWidget, QTabWidget, QWidget, QScrollArea, QFrame)
 from PyQt5.QtGui import QStandardItem, QBrush, QColor
 from PyQt5.QtCore import Qt
 
@@ -307,6 +307,15 @@ def update_tabview(widget, obj_name, size=None, pos=None, enabled=None):
             tv.setEnabled(enabled)
     except (ValueError, AttributeError) as e:
         raise e.__type__.__name__(e)
+
+
+def create_scrollarea(widget, child, size, pos):
+    scrollarea = QScrollArea(widget)
+    scrollarea.setWidget(child)
+    update_size(scrollarea, size)
+    update_pos(scrollarea, pos)
+    scrollarea.setFrameShape(QFrame.NoFrame)
+    return scrollarea
 
 
 def check_prerequisites(widget):
