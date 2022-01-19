@@ -73,11 +73,6 @@ class DBConnector:
             raise DBExceptions.ConnectionFailure(e)
 
     def update_types(self):
-        # DEBUG
-        # doc = self.db["TestColl"].find_one({},{"_id": 0})
-        # for x in doc:
-        #     #print(x, doc[x])
-        #     print("result", self.rec_dict_search(doc))
         self.types = {}
         for collection in self.db.list_collection_names():
             # init each new dict with collection name
@@ -91,13 +86,13 @@ class DBConnector:
                     self.types[f"{collection}"][f"{key}"] = f"{type(doc[key]).__name__}"
                     # if key is a dict: add sub-items to self.types with dot Notation
                     if isinstance(doc[key],dict):
-                        entries = self.rec_dict_search(doc[key])
+                        entries = self.__rec_dict_search(doc[key])
                         # entries = self.get_dict_entries(collection, key)
                         for entry in entries:
                             self.types[f"{collection}"][f"{key}.{entry}"] = f"{entries[entry]}"
         #print(self.types)
 
-    def rec_dict_search(self, doc, init_string="", res=None):
+    def __rec_dict_search(self, doc, init_string="", res=None):
         # unsauber, vielleicht nochmal ueberarbeiten
         if res is None:
             res = {}
@@ -106,7 +101,7 @@ class DBConnector:
                 tmp = init_string
                 res[init_string + key] = type(value).__name__
                 init_string = init_string + key + "."
-                self.rec_dict_search(value, init_string, res)
+                self.__rec_dict_search(value, init_string, res)
                 init_string = tmp
             else:
                 res[init_string + key] = type(value).__name__

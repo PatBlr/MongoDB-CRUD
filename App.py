@@ -14,7 +14,7 @@ from DBConnector import DBConnector
 from QueryGenerator import QueryGenerator
 
 
-class MainWindow(QWidget):
+class App(QWidget):
     def __init__(self):
         super().__init__()
         self.width = 1400
@@ -34,71 +34,134 @@ class MainWindow(QWidget):
             "starts with",
             "ends with"
         ]
+        self.obj = {}
+        self.font = QFont()
+        self.font.setPointSize(9)
+        self.connector = DBConnector()
+        self.winfind = None
+        self.init_ui()
+
+    def init_ui(self):
+        # inputbox for database string
+        ib_connect = create_inputbox(widget=self, obj_name="ib_connect", font=self.font, size=[400, 30],
+                                     pos=[10, 10], text="localhost:27017")
+        self.obj[ib_connect.objectName()] = ib_connect
+        # connection button - will attempt to connect after clicking
+        button_connect = create_button(widget=self, obj_name="button_connect", font=self.font, size=[100, 30],
+                                       pos=[420, 10], text="connect")
+        button_connect.clicked.connect(self.on_connect)
+        self.obj[button_connect.objectName()] = button_connect
+        # display for connection status or errors / warnings
+        label_connected = create_label(widget=self, obj_name="label_connect", font=self.font, size=[500, 30],
+                                       pos=[550, 10], text="not connected", color="red")
+        self.obj[label_connected.objectName()] = label_connected
+        # combobox for databases
+        combo_dbs = create_combo(widget=self, obj_name="combo_dbs", font=self.font, size=[200, 30],
+                                 pos=[10, 50], enabled=False, stditem="Database:")
+        # combo_dbs.installEventFilter(self)
+        combo_dbs.currentTextChanged.connect(self.on_db_changed)
+        self.obj[combo_dbs.objectName()] = combo_dbs
+        tabview = create_tabview(widget=self, obj_name="tabview", size=[self.width, self.height], pos=[0, 100],
+                                 tabs=["test", "test2"], enabled=False, obj_list=self.obj)
+        self.obj[tabview.objectName()] = tabview
+
+        self.winfind = MainWindow(self.obj["tab_test2"], self.connector, self.options)
+        print(self.winfind)
+
+    def on_connect(self):
+        # pyqtSlot for button_connect
+        # on click connect to the database with the URI entered in ib_connect
+        db_uri = ""
+        try:
+            db_uri = self.obj["ib_connect"].text()
+        except KeyError as e:
+            print(e)
+        try:
+            self.connector.connect(db_uri)
+            self.connector.check_connection()
+            # enable gui widgets
+            update_label(widget=self, obj_name="label_connect", text="connected", color="green")
+            update_combo(widget=self, obj_name="combo_dbs", items=self.connector.get_list_dbs(), enabled=True,
+                         stditem="Database:")
+            update_tabview(widget=self, obj_name="tabview", enabled=True)
+        except DBExceptions.ConnectionFailure as e:
+            print(e)
+        except Exception as e:
+            print(e)
+
+    def on_db_changed(self, value):
+        # pyqtSlot for combo_dbs
+        # on index change fill treeview beneath with all collections and it's fields
+        # TODO: Refactor Exceptions
+        if value == "Database:" or value == "":
+            return
+        try:
+            self.connector.set_db(value)
+            self.connector.update_types()
+            # TODO: Update child widgets
+            if self.winfind is not None:
+                self.winfind.update_ui()
+        except Exception as e:
+            print(e)
+
+
+class MainWindow(QWidget):
+    def __init__(self, tab, connector, options):
+        super().__init__()
+        self.tab = tab
+        self.width = 1400
+        self.height = 810
+        self.resize(self.width, self.height)
+        self.setWindowTitle('MongoDB Query Generator')
+        self.options = options
         self.projections = {}
         self.amount_statements = 0
-        self.font = QFont()
-        self.font_disabled = self.font
-        self.font.setPointSize(9)
         self.obj = {}
-        self.connector = DBConnector()
+        self.font = QFont()
+        self.font.setPointSize(9)
+        self.connector = connector
         self.init_ui()
 
     def init_ui(self):
         # create GUI
         # TODO: Refactor Exceptions
         try:
-            # inputbox for database string
-            ib_connect = create_inputbox(widget=self, obj_name="ib_connect", font=self.font, size=[400, 30],
-                                         pos=[10, 10], text="localhost:27017")
-            self.obj[ib_connect.objectName()] = ib_connect
-            # connection button - will attempt to connect after clicking
-            button_connect = create_button(widget=self, obj_name="button_connect", font=self.font, size=[100, 30],
-                                           pos=[420, 10], text="connect")
-            button_connect.clicked.connect(self.on_connect)
-            self.obj[button_connect.objectName()] = button_connect
-            # display for connection status or errors / warnings
-            label_connected = create_label(widget=self, obj_name="label_connect", font=self.font, size=[500, 30],
-                                           pos=[550, 10], text="not connected", color="red")
-            self.obj[label_connected.objectName()] = label_connected
-            # combobox for databases
-            combo_dbs = create_combo(widget=self, obj_name="combo_dbs", font=self.font, size=[200, 30],
-                                     pos=[10, 50], enabled=False)
-            combo_dbs.installEventFilter(self)
-            combo_dbs.currentTextChanged.connect(self.on_db_changed)
-            self.obj[combo_dbs.objectName()] = combo_dbs
             # tree with collection->value|type for
-            tree = create_tree(widget=self, obj_name="tree", font=self.font, size=[500, 700],
-                               pos=[10, 100], headers=["Name", "Type"])
+            tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
+                               pos=[10, 10], headers=["Name", "Type"], enabled=True)
             tree.itemDoubleClicked.connect(self.on_item_selected)
             self.obj[tree.objectName()] = tree
 
-            box_select = QWidget(self)
-            box_select.resize(770, 0)
-            # box_select.setStyleSheet("background-color: blue")
+            box_statements = QWidget(self.tab)
+            box_statements.resize(770, 0)
+            box_statements.setObjectName("box_statements")
+            self.obj[box_statements.objectName()] = box_statements
+            # box_statements.setStyleSheet("background-color: blue")
+            box_layout = QGridLayout(box_statements)
 
-            box_layout = QGridLayout(box_select)
-
-            create_scrollarea(widget=self, child=box_select, size=[800, 250], pos=[550, 100])
+            create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
             # scrollarea.setStyleSheet("background-color: white")
 
-            self.add_dialog_buttons(widget=box_select, layout=box_layout)
-            self.add_statement(widget=box_select, start=100 * self.amount_statements, layout=box_layout)
+            self.add_dialog_buttons(widget=box_statements, layout=box_layout)
+            self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
 
             # TODO
-            button_find = create_button(widget=self, obj_name="button_find", font=self.font, size=[100, 30],
-                                        pos=[550, 460], color="grey", text="Find", enabled=False)
-            button_find.clicked.connect(self.on_find)
-            self.obj[button_find.objectName()] = button_find
-            # TODO
-            combo_projection = create_combo(widget=self, obj_name="combo_projection", font=self.font, size=[200, 30],
-                                            pos=[550, 400], enabled=False, checkable=True,
+            combo_projection = create_combo(widget=self.tab, obj_name="combo_projection", font=self.font,
+                                            size=[200, 30], pos=[550, 280], enabled=True, checkable=True,
                                             stditem="Projection: (include)")
             combo_projection.view().pressed.connect(self.on_projection_clicked)
             combo_projection.installEventFilter(self)
             self.obj[combo_projection.objectName()] = combo_projection
+
             # TODO
-            tabview = create_tabview(widget=self, obj_name="tabview", size=[800, 300], pos=[550, 500],
-                                     tabs=["Query", "Result"], enabled=False)
+            button_find = create_button(widget=self.tab, obj_name="button_find", font=self.font, size=[100, 30],
+                                        pos=[550, 340], text="Find", enabled=True)
+            button_find.clicked.connect(self.on_find)
+            self.obj[button_find.objectName()] = button_find
+
+            # TODO
+            tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
+                                     tabs=["Query", "Result"], enabled=True, obj_list=self.obj)
             self.obj[tabview.objectName()] = tabview
             # display for generated query - pos is relative to the tabview - (-1) removes visible border
             tb_query = create_textbox(widget=self.obj["tab_query"], obj_name="tb_query", font=self.font,
@@ -114,12 +177,31 @@ class MainWindow(QWidget):
         except Exception as e:
             print(e, "init_ui")
 
+    def update_ui(self):
+        # clear UI
+        print("clearing ui")
+        self.obj["tree"].clear()
+        while self.amount_statements > 1:
+            self.remove_last_statement(self.obj["box_statements"])
+        self.obj[f"lw_select1"].clear()
+        self.obj[f"combo_select1"].setCurrentIndex(0)
+        self.obj[f"ib_select1"].clear()
+        update_combo(widget=self, obj_name="combo_projection", stditem="Projection: (include)")
+        self.obj["tb_query"].clear()
+        self.obj["tb_query_pretty"].clear()
+        self.obj["tb_result"].clear()
+        # fill tree
+        types = self.connector.get_types()
+        # add every collection to the tree without a type
+        for collection in self.connector.get_list_collections():
+            item = QTreeWidgetItem(self.obj["tree"], [collection, ''])
+            entries = self.connector.get_collection_entries(collection, distinct=True)
+            if entries is not None:
+                self.rec_fill_subitem(item, collection, entries, types)
+
     def eventFilter(self, target, event):
         # filter Mousewheel on target - prevents scrolling on combobox
         if event.type() == QEvent.Wheel:
-            return True
-        if event.type() == QEvent.FocusIn:
-            print(target, target.objectName())
             return True
         return False
 
@@ -150,71 +232,12 @@ class MainWindow(QWidget):
                 parent = parent.parent()
             if type_name != "":
                 # TODO - lw select und label type aendern
-                update_list(widget=self, obj_name=f"lw_select{self.amount_statements}", clear=True, items=[collection, name])
+                update_list(widget=self, obj_name=f"lw_select{self.amount_statements}", clear=True,
+                            items=[collection, name])
                 update_label(widget=self, obj_name=f"label_type{self.amount_statements}", text=type_name + ":")
                 self.fill_projections(self.possible_projections(collection))
                 update_combo(widget=self, obj_name="combo_projection", enabled=True, items=self.projections,
                              stditem="Projection: (include)", checkable=True)
-
-    def on_connect(self):
-        # pyqtSlot for button_connect
-        # on click connect to the database with the URI entered in ib_connect
-        db_uri = ""
-        try:
-            db_uri = self.obj["ib_connect"].text()
-        except KeyError as e:
-            print(e)
-        try:
-            self.connector.connect(db_uri)
-            self.connector.check_connection()
-            # enable gui widgets
-            update_label(widget=self, obj_name="label_connect", text="connected", color="green")
-            update_combo(widget=self, obj_name="combo_dbs", items=self.connector.get_list_dbs(), enabled=True)
-            update_tree(widget=self, obj_name="tree", enabled=True)
-            # TODO - von hier
-            update_label(widget=self, obj_name=f"label_select1", color="black")
-            update_list(widget=self, obj_name=f"lw_select1", enabled=True)
-            update_combo(widget=self, obj_name=f"combo_select1", items=self.options, enabled=True, stditem="Options:")
-            update_label(widget=self, obj_name=f"label_type1", color="black")
-            update_inputbox(widget=self, obj_name=f"ib_select1", enabled=True)
-            # TODO - bis hier die 1 umaendern ???
-            update_button(widget=self, obj_name="button_add", enabled=True)
-            update_combo(widget=self, obj_name="combo_projection", enabled=True, stditem="Projection: (include)")
-            update_button(widget=self, obj_name="button_find", enabled=True, color="black")
-            update_tabview(widget=self, obj_name="tabview", enabled=True)
-        except DBExceptions.ConnectionFailure as e:
-            update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
-            print(e)
-        except Exception as e:
-            print(e)
-
-    def on_db_changed(self, value):
-        # pyqtSlot for combo_dbs
-        # on index change fill treeview beneath with all collections and it's fields
-        # TODO: Refactor Exceptions
-        # clear UI
-        self.obj["tree"].clear()
-        for i in range(1, self.amount_statements):
-            self.obj[f"lw_select{i}"].clear()
-            self.obj[f"combo_select{i}"].setCurrentIndex(0)
-            self.obj[f"ib_select{i}"].clear()
-        update_combo(widget=self, obj_name="combo_projection", stditem="Projection: (include)")
-        self.obj["tb_query"].clear()
-        self.obj["tb_result"].clear()
-        if value == "":
-            return
-        try:
-            self.connector.set_db(value)
-            self.connector.update_types()
-            types = self.connector.get_types()
-            # add every collection to the tree without a type
-            for collection in self.connector.get_list_collections():
-                item = QTreeWidgetItem(self.obj["tree"], [collection, ''])
-                entries = self.connector.get_collection_entries(collection, distinct=True)
-                if entries is not None:
-                    self.rec_fill_subitem(item, collection, entries, types)
-        except Exception as e:
-            print(e)
 
     def on_find(self):
         statements = {}
@@ -286,16 +309,16 @@ class MainWindow(QWidget):
 
     def add_dialog_buttons(self, widget, layout):
         button_add = create_button(widget=widget, obj_name="button_add", text="Add Statement", font=self.font,
-                                   size=[200, 30], pos=[150, widget.height()-30], enabled=False)
-        button_add.clicked.connect(lambda: self.add_statement(widget=widget, start=100 * self.amount_statements, layout=layout,
-                                                              enabled=True))
+                                   size=[200, 30], pos=[150, widget.height()-30], enabled=True)
+        button_add.clicked.connect(lambda: self.add_statement(widget=widget, start=100 * self.amount_statements,
+                                                              layout=layout,))
         self.obj[button_add.objectName()] = button_add
         button_del = create_button(widget=widget, obj_name="button_del", text="Remove last Statement", font=self.font,
                                    size=[200, 30], pos=[350, widget.height()-30])
         button_del.clicked.connect(lambda: self.remove_last_statement(widget=widget))
         self.obj[button_del.objectName()] = button_del
 
-    def add_statement(self, widget, start, layout, enabled=False):
+    def add_statement(self, widget, start, layout):
         if self.amount_statements > 0:
             if self.obj[f"lw_select{self.amount_statements}"].count() == 0:
                 error = "Please specify Field before adding new and / or Statement"
@@ -312,8 +335,6 @@ class MainWindow(QWidget):
                 return
         self.amount_statements += 1
         try:
-            color = "black" if enabled else "grey"
-
             if self.amount_statements > 1:
                 combo_clause = create_combo(widget=widget, obj_name=f"combo_clause{self.amount_statements}", font=self.font,
                                             size=[0, 0], pos=[0, 0], stditem="Clause:", items=["and", "or"],
@@ -322,35 +343,35 @@ class MainWindow(QWidget):
                 self.obj[combo_clause.objectName()] = combo_clause
             # label indicator for the select field
             label_select = create_label(widget=widget, obj_name=f"label_select{self.amount_statements}", font=self.font, size=[400, 30],
-                                        pos=[10, start+1], text="Field:", color=color, enabled=enabled)
+                                        pos=[10, start+1], text="Field:", color="black")
             layout.addWidget(label_select, self.amount_statements, 1, Qt.AlignTop)
             self.obj[label_select.objectName()] = label_select
             # list widget containing the clicked field
             lw_select = create_list(widget=widget, obj_name=f"lw_select{self.amount_statements}", font=self.font, size=[200, 30],
-                                    pos=[10, start+30], horizontal=True, enabled=enabled)
+                                    pos=[10, start+30], horizontal=True, enabled=True)
             lw_select.setMaximumSize(1000, 26)
             lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
             layout.addWidget(lw_select, self.amount_statements, 2, Qt.AlignTop)
             self.obj[lw_select.objectName()] = lw_select
             # combobox containing all possible options for comparison
             combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.amount_statements}", font=self.font, size=[200, 30],
-                                        pos=[250, start+30], enabled=enabled, stditem="Options:", items=self.options)
+                                        pos=[250, start+30], enabled=True, stditem="Options:", items=self.options)
             combo_select.installEventFilter(self)
             layout.addWidget(combo_select, self.amount_statements, 3, Qt.AlignTop)
             self.obj[combo_select.objectName()] = combo_select
             # label indicator for the type of the selected field
             label_type = create_label(widget=widget, obj_name=f"label_type{self.amount_statements}", font=self.font, size=[400, 30],
-                                      pos=[500, start+30], text="type:", color=color, enabled=enabled)
+                                      pos=[500, start+30], text="type:", color="black")
             layout.addWidget(label_type, self.amount_statements, 4, Qt.AlignTop)
             self.obj[label_type.objectName()] = label_type
             # inputbox for the comparison string
             ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.amount_statements}", font=self.font, size=[200, 30],
-                                        pos=[570, start+30], enabled=enabled)
+                                        pos=[570, start+30], enabled=True)
             ib_select.installEventFilter(self)
             layout.addWidget(ib_select, self.amount_statements, 5, Qt.AlignTop)
             self.obj[ib_select.objectName()] = ib_select
             widget.resize(widget.width(), widget.height()+100)
-
+            enabled = True if self.amount_statements > 1 else False
             update_button(widget=self,obj_name="button_add", pos=[150, widget.height()-30])
             update_button(widget=self,obj_name="button_del", pos=[350, widget.height()-30], enabled=enabled)
         except Exception as e:
@@ -400,7 +421,7 @@ class MainWindow(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    demo = MainWindow()
+    demo = App()
     demo.show()
     sys.exit(app.exec_())
 

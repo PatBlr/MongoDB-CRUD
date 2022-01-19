@@ -276,7 +276,7 @@ def update_list(widget, obj_name, font=None, size=None, pos=None, color=None, en
         raise e.__type__.__name__(e)
 
 
-def create_tabview(widget, obj_name, size, pos, tabs, enabled=False):
+def create_tabview(widget, obj_name, size, pos, tabs, obj_list,enabled=False):
     tv = QTabWidget(widget)
     tv.setObjectName(obj_name)
     update_size(tv, size)
@@ -288,7 +288,7 @@ def create_tabview(widget, obj_name, size, pos, tabs, enabled=False):
         tab = QWidget()
         tab.setObjectName(f"tab_{item.lower()}")
         tv.addTab(tab, item)
-        widget.obj[tab.objectName()] = tab
+        obj_list[tab.objectName()] = tab
     return tv
 
 
