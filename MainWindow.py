@@ -1,5 +1,7 @@
 import sys
 import json
+from datetime import datetime, date
+from bson import json_util
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QTreeWidgetItem, QScrollArea, QWidget, QPushButton, QGridLayout, QLayout, QFrame)
 from PyQt5.QtGui import QFont
@@ -100,19 +102,24 @@ class MainWindow(QMainWindow):
             self.obj[tabview.objectName()] = tabview
             # display for generated query - pos is relative to the tabview - (-1) removes visible border
             tb_query = create_textbox(widget=self.obj["tab_query"], obj_name="tb_query", font=self.font,
-                                      size=[800, 275], pos=[-1, -1], enabled=True)
+                                      size=[400, 275], pos=[-1, -1], enabled=True)
             self.obj[tb_query.objectName()] = tb_query
+            tb_query_pretty = create_textbox(widget=self.obj["tab_query"], obj_name="tb_query_pretty", font=self.font,
+                                      size=[400, 275], pos=[400, -1], enabled=True)
+            self.obj[tb_query_pretty.objectName()] = tb_query_pretty
             # display for results - pos is relative to the tabview - (-1) removes visible border
             tb_result = create_textbox(widget=self.obj["tab_result"], obj_name="tb_result", font=self.font,
                                        size=[800, 275], pos=[-1, -1], enabled=True)
             self.obj[tb_result.objectName()] = tb_result
-
         except Exception as e:
             print(e, "init_ui")
 
     def eventFilter(self, target, event):
         # filter Mousewheel on target - prevents scrolling on combobox
         if event.type() == QEvent.Wheel:
+            return True
+        if event.type() == QEvent.FocusIn:
+            print(target, target.objectName())
             return True
         return False
 
@@ -211,7 +218,11 @@ class MainWindow(QMainWindow):
 
     def on_find(self):
         statements = {}
-        statement = []
+        statement = {}
+        # clear TBs first
+        update_textbox(widget=self, obj_name="tb_query", text="")
+        update_textbox(widget=self, obj_name="tb_query_pretty", text="")
+        update_textbox(widget=self, obj_name="tb_result", text="")
         try:
             for i in range(1, self.amount_statements+1):
                 if self.obj[f"lw_select{i}"].count() < 2:
@@ -232,36 +243,27 @@ class MainWindow(QMainWindow):
                 clause = self.obj[f"combo_clause{i}"].currentText() if i > 1 else ""
                 statement["clause"] = clause
                 statements[f"statement{i}"] = statement
-            q = QueryGenerator(statements, self.connector.get_types()[statement["collection"]], self.projections)
-
-
+            qgenerator = QueryGenerator(statements, self.connector.get_types()[statement["collection"]], self.projections)
+            query = qgenerator.get_query()
+            print(query)
+            query = json_util.loads(query.replace("'", '"'))
+            projection = qgenerator.get_projection()
+            result = self.connector.find(collection=statement["collection"], query=query, projection=projection)
+            update_textbox(widget=self, obj_name="tb_query", text=qgenerator.get_query_string())
+            update_textbox(widget=self, obj_name="tb_query_pretty", text=qgenerator.get_query_string_pretty())
+            update_textbox(widget=self, obj_name="tb_result", text="")
+            if len(result) == 0:
+                update_textbox(widget=self, obj_name="tb_result", text="No Result")
+            else:
+                update_textbox(widget=self, obj_name="tb_result", text=f"{len(result)} result(s) found:\n")
+                for res in result:
+                    text = json.dumps(res, indent=4, sort_keys=False, default=self.json_serial)
+                    self.obj["tb_result"].append(text)
+        except json.JSONDecodeError as e:
+            update_textbox(widget=self, obj_name="tb_query", text=str(e)+"\nPossible mistakes:\n"
+                                                                         "Bools: [true/false]\n", color="red")
         except Exception as e:
-            print(e)
-        # update_textbox(widget=self, obj_name="tb_result", text="")
-        # option = self.obj["combo_select"].currentText()
-        # if self.obj["lw_select"].count() > 0:
-        #     if option in self.options:
-        #         collection = self.obj["lw_select"].item(0).text()
-        #         field = self.obj["lw_select"].item(1).text()
-        #         field_type = self.connector.get_types()[collection][field]
-        #         text = self.obj["ib_select"].text()
-        #         try:
-        #             q = QueryGenerator(field, field_type, option, text, self.projections,
-        #                                self.connector.get_types()[collection])
-        #             query_str = f"db.{collection}.find({q.generate_string()})"
-        #             query = q.generate_query()
-        #             update_textbox(widget=self, obj_name="tb_query", text=query_str)
-        #             result = self.connector.find(collection, query[0], query[1])
-        #             print(type(result))
-        #             for x in result:
-        #                 text = json.dumps(x, indent=4, sort_keys=False)
-        #                 self.obj["tb_result"].append(text)
-        #         except Exception as e:
-        #             update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
-        #     else:
-        #         update_textbox(widget=self, obj_name="tb_query", text="No option selected", color="red")
-        # else:
-        #     update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
+            print(e, "in on_find")
 
     def check_scrollbar(self):
         # can't check visibility by itself, so this is a makeshift solution
@@ -344,6 +346,7 @@ class MainWindow(QMainWindow):
             # inputbox for the comparison string
             ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.amount_statements}", font=self.font, size=[200, 30],
                                         pos=[570, start+30], enabled=enabled)
+            ib_select.installEventFilter(self)
             layout.addWidget(ib_select, self.amount_statements, 5, Qt.AlignTop)
             self.obj[ib_select.objectName()] = ib_select
             widget.resize(widget.width(), widget.height()+100)
@@ -362,7 +365,6 @@ class MainWindow(QMainWindow):
                          f"lw_select{self.amount_statements}",
                          f"label_type{self.amount_statements}",
                          f"combo_clause{self.amount_statements}"]
-            print(to_delete)
             self.remove_widgets(to_delete)
             self.amount_statements -= 1
             widget.resize(widget.width(), widget.height()-100)
@@ -389,6 +391,12 @@ class MainWindow(QMainWindow):
     def closeEvent(self, a0: QtGui.QCloseEvent):
         self.connector.close()
 
+    def json_serial(self, obj):
+        # source: https://stackoverflow.com/questions/11875770/how-to-overcome-datetime-datetime-not-json-serializable
+        """JSON serializer for objects not serializable by default json code"""
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        raise TypeError("Type %s not serializable" % type(obj))
 
 def main():
     app = QApplication(sys.argv)
