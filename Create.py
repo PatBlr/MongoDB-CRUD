@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QPushButton, QComboBox, QTextBrowser, QTreeWidget, QHeaderView,
-                             QListWidget, QTabWidget, QWidget, QScrollArea, QFrame)
+                             QListWidget, QTabWidget, QWidget, QScrollArea)
 from PyQt5.QtGui import QStandardItem, QBrush, QColor
 from PyQt5.QtCore import Qt
 
@@ -314,7 +314,6 @@ def create_scrollarea(widget, child, size, pos):
     scrollarea.setWidget(child)
     update_size(scrollarea, size)
     update_pos(scrollarea, pos)
-    scrollarea.setFrameShape(QFrame.NoFrame)
     return scrollarea
 
 
