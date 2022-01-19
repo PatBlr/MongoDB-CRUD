@@ -1,4 +1,5 @@
-from bson import ObjectId
+from bson import json_util
+import json
 from collections import defaultdict
 import DBExceptions
 
@@ -8,7 +9,7 @@ class QueryGenerator:
     def __init__(self, statements, types, projections):
         self.statements = statements
         self.types = types
-        self.projection = self.filter_projection(projections)
+        self.projection = self.__filter_projection(projections)
         self.options = {
                 # resolving table
                 # uses string formatting (str.format(argument=...)) to replace {argument} with text contents
@@ -24,17 +25,30 @@ class QueryGenerator:
                 "ends with": {"name": "$regex", "argument": "{argument}$", "options": "m"},
                 "contains": {"name": "$regex", "argument": "{argument}", "options": ""}
             }
-        self.test()
+        self.query_string = ""
+        self.query_string_pretty = ""
+        self.query = ""
+        self.__generate()
 
-    def test(self):
+    def get_query(self):
+        return self.query
+
+    def get_query_string(self):
+        return self.query_string
+
+    def get_query_string_pretty(self):
+        return self.query_string_pretty
+
+    def get_projection(self):
+        return self.projection
+
+    def __generate(self):
         if len(self.statements) > 1:
             ands = defaultdict(dict)  # dict of dict
             ors = defaultdict(dict)  # dict
             and_statements = []
             or_statements = []
-
-            self.rec_test(ands, 1, 1)
-
+            self.__link_ands(ands)
             found = False
             for i in range(1, len(self.statements)+1):
                 for liste in ands.values():
@@ -44,27 +58,15 @@ class QueryGenerator:
                     ors[f"statement{i}"] = self.statements[f"statement{i}"]
                 found = False
             for statements in ands.values():
-                and_statements.append(self.generate_and_statement(statements))
+                and_statements.append(self.__generate_and_statement(statements))
             for statement in ors.values():
-                or_statements.append(self.resolve_statement(statement))
-
-            if len(or_statements) > 0:
-                print(self.generate_or_statement(and_statements, or_statements))
-            else:
-                print(self.generate_and_statement(and_statements))
-
-            # print("ands",ands)
-            # print("ors",ors)
-            # print("or_statements",or_statements)
-            # print("and_statements",and_statements)
-
-
-                #print(self.generate_and_statement(statements))
+                or_statements.append(self.__resolve_statement(statement))
+            query_string = self.__generate_query(or_statements, and_statements)
         else:
-            statement = self.statements["statement1"]
-            print(self.resolve_statement(statement))
+            query_string = self.__resolve_statement(self.statements["statement1"])
+        self.__add_returns(query_string)
 
-    def rec_test(self, ands, i, j):
+    def __link_ands(self, ands, i=1, j=1):
         # and is stronger than or -> bind the ands and add them to a dict
         try:
             if i < len(self.statements):
@@ -77,111 +79,128 @@ class QueryGenerator:
                     if self.statements[f"statement{i}"]["clause"] == "and":
                         j = j + 1
                     i = i + 1
-                self.rec_test(ands, i, j)
+                self.__link_ands(ands, i, j)
         except Exception as e:
             print(e)
 
-    def resolve_statement(self, statement):
+    def __resolve_statement(self, statement):
         try:
-            option = self.resolve_option(statement["option"])
-            parsed_text = self.resolve_type(option, statement["text"], statement["field"])
-            argument = self.resolve_argument(statement["option"], statement["text"])
-
-            query = self.generate_string(statement, option, argument)
+            option = self.__resolve_option(statement["option"])
+            argument = self.__resolve_argument(statement["option"], statement["text"])
+            query = self.__generate_string(statement, option, argument)
             return query
         except Exception as e:
             print(e)
 
-    def generate_string(self, statement, option, argument):
+    def __generate_string(self, statement, option, argument):
         if option == "$regex":
-            argument = f"/{argument}/{self.options[statement['option']]['options']}"
+            argument = f"'/{argument}/{self.options[statement['option']]['options']}'"
         query = f"{{'{statement['field']}': {{'{option}': {argument}}}}}"
         return query
 
-    def generate_or_statement(self, and_statements, or_statements):
-        string = ""
-        i = 1
-        for statement in or_statements:
-            string += statement
-        for statement in and_statements:
-            string += statement
-            if i < len(and_statements):
-                string += ", "
-            i += 1
-
-        query = f"$or: [{string}]"
-        return query
-
-    def generate_and_statement(self, statements):
+    def __generate_and_statement(self, statements):
         string = ""
         i = 1
         for statement in statements.values():
-            string += self.resolve_statement(statement)
+            string += self.__resolve_statement(statement)
             if i < len(statements):
-                string += ","
+                string += ", "
             i += 1
-        query = f"$and: [{string}]"
+        query = f'"$and": [{string}]'
         return query
 
-    def generate_query(self, and_statements, or_statements):
-        pass
+    def __generate_query(self, or_statements, and_statements):
+        string = ""
+        i = 1
+        if len(or_statements) > 0:
+            for statement in or_statements:
+                string += statement
+                if i < len(or_statements):
+                    string += ", "
+                i += 1
+            if len(and_statements) > 0:
+                string += ", "
+        i = 1
+        if len(and_statements) > 0:
+            for statement in and_statements:
+                if len(or_statements) > 0:
+                    string += f"{{{statement}}}"
+                else:
+                    string += f"{statement}"
+                if i < len(and_statements):
+                    string += ", "
+                i += 1
 
-    #
-    # def generate_query(self):
-    #     # can't return a string... pymongo find only allows dicts or BSON -> return tuple of dicts
-    #     filter_query = {self.field: {self.comp: self.parsed_text}}
-    #     return filter_query, self.inclusion_list
-    #
+        if len(or_statements) > 0:
+            query = f'{{"$or": [{string}]}}'
+        else:
+            query = f"{{{string}}}"
 
-    def filter_projection(self, projections):
+        return query
+
+    def __add_returns(self, query_string):
+        self.query = query_string
+        self.query_string = f"{query_string}, {self.projection}"
+        print("query",self.query)
+        print("query_string",query_string, type(query_string))
+        projection = json.loads(str(self.projection).replace("'", '"'))
+        print("proje", projection)
+        query_string = query_string.replace("'", '"')
+        print("query_string", query_string, type(query_string))
+        query_string = json.loads(query_string.replace("'", '"'))
+        print("neuer qstring", query_string)
+        self.query_string_pretty = f"{json.dumps(query_string, indent=4, sort_keys=False)}, " \
+                                   f"{json.dumps(projection, indent=4, sort_keys=False)}"
+        # a bit of cheating here, json_util can't resolve regex /.../x, so "/.../x" need it's quotes to be removed
+        occ = self.__deep_search_dict(query_string, "$regex")
+        for value in occ:
+            self.query_string = self.__tidy_up_regex(self.query_string, value)
+            self.query_string_pretty = self.__tidy_up_regex(self.query_string_pretty, value)
+            self.query = self.__remove_regex(self.query, value)
+
+    def __deep_search_dict(self, dic, searchkey, occurrences=None):
+        if occurrences is None:
+            occurrences = []
+        else:
+            occurrences = occurrences
+        for key, value in dic.items():
+            if isinstance(value, dict):
+                self.__deep_search_dict(value, searchkey, occurrences)
+            elif isinstance(value, list):
+                for x in value:
+                    self.__deep_search_dict(x, searchkey, occurrences)
+            else:
+                if key == searchkey:
+                    occurrences.append(value)
+        return occurrences
+
+    def __tidy_up_regex(self, string, text):
+        string = string.replace(f"'{text}'", text)
+        string = string.replace(f'"{text}"', text)
+        return string
+
+    def __remove_regex(self, string, text):
+        string = string.replace(f"{text}", text.replace("/m", "").replace("/", ""))
+        string = string.replace(f'"{text}"', text)
+        return string
+
+    def __filter_projection(self, projections):
         # cannot do inclusion in exclusion projection and vice versa
         filtered = {}
         for key, value in projections.items():
             if value == 1 or key == '_id':
-                filtered[key] = value
+                filtered[key.replace("'", '"')] = value
         return filtered
 
-    def resolve_clause(self, clause):
+    def __resolve_clause(self, clause):
         if clause in ["and", "or"]:
             clause = "$and" if clause == "and" else "$or"
             return clause
 
-    def resolve_option(self, option):
+    def __resolve_option(self, option):
         option = self.options[option]["name"]
         return option
 
-    def resolve_argument(self, argument, text):
+    def __resolve_argument(self, argument, text):
         argument = self.options[argument]["argument"]
         return argument.format(argument=text)
-
-    def resolve_type(self, option, text, field):
-        if option == "$regex":
-            # regex only on strings -> don't cast text
-            return text
-        if self.types[field] == 'bool':
-            if text == 'false':
-                parsed_text = False
-            elif text == 'true':
-                parsed_text = True
-            else:
-                raise DBExceptions.UnexpectedValue(f"Bool '{text}' not defined. Possible entries: [true, false]")
-            return parsed_text
-        if self.types[field] == 'int':
-            try:
-                parsed_text = int(text)
-            except ValueError:
-                raise DBExceptions.UnexpectedValue("expected int")
-            return parsed_text
-        if self.types[field] == 'float':
-            try:
-                parsed_text = float(text)
-            except ValueError:
-                raise DBExceptions.UnexpectedValue("expected float")
-            return parsed_text
-        if self.types[field] == 'ObjectId':
-            try:
-                parsed_text = ObjectId(text)
-            except ValueError:
-                raise DBExceptions.UnexpectedValue("expected ObjectId")
-            return parsed_text
-        return text
