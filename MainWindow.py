@@ -273,13 +273,6 @@ class MainWindow(QMainWindow):
         else:
             sender.setMaximumSize(1000, 26)
 
-    def check_scrollbar(self):
-        sender = self.sender().parent().parent().objectName()
-        if self.sender().minimum() != self.sender().maximum():
-            update_list(widget=self, obj_name=sender, size=[200, 60])
-        else:
-            update_list(widget=self, obj_name=sender, size=[200, 30])
-
     def rec_fill_subitem(self, item, collection, entries, types, i=""):
         for key in entries:
             if isinstance(entries[key], dict):
