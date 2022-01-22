@@ -92,7 +92,6 @@ class App(QWidget):
             update_label(widget=self, obj_name="label_connect", text="connected", color="green")
             update_combo(widget=self, obj_name="combo_dbs", items=self.connector.get_list_dbs(), enabled=True,
                          stditem="Database:")
-            update_tabview(widget=self, obj_name="tabview", enabled=True)
         except DBExceptions.ConnectionFailure as e:
             print(e)
         except Exception as e:
@@ -105,6 +104,7 @@ class App(QWidget):
         if value == "Database:" or value == "":
             return
         try:
+            update_tabview(widget=self, obj_name="tabview", enabled=True)
             self.connector.set_db(value)
             self.connector.update_types()
             self.update_children()
