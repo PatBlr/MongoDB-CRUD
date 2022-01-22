@@ -17,10 +17,6 @@ class WinDelete(QWidget):
         super().__init__()
         self.tab = tab
         self.parent = parent
-        self.width = 1400
-        self.height = 810
-        self.resize(self.width, self.height)
-        self.setWindowTitle('MongoDB Query Generator')
         self.options = self.parent.options
         self.projections = {}
         self.amount_statements = 0
@@ -32,67 +28,63 @@ class WinDelete(QWidget):
 
     def init_ui(self):
         # create GUI
-        # TODO: Refactor Exceptions
-        try:
-            # tree with collection->value|type for
-            tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
-                               pos=[10, 10], headers=["Name", "Type"], enabled=True)
-            tree.itemDoubleClicked.connect(self.on_item_selected)
-            self.objects[tree.objectName()] = tree
+        # tree with collection->value|type for
+        tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
+                           pos=[10, 10], headers=["Name", "Type"], enabled=True)
+        tree.itemDoubleClicked.connect(self.on_item_selected)
+        self.objects[tree.objectName()] = tree
 
-            box_statements = QWidget(self.tab)
-            box_statements.resize(770, 0)
-            box_statements.setObjectName("box_statements")
-            self.objects[box_statements.objectName()] = box_statements
-            # box_statements.setStyleSheet("background-color: blue")
-            box_layout = QGridLayout(box_statements)
+        box_statements = QWidget(self.tab)
+        box_statements.resize(770, 0)
+        box_statements.setObjectName("box_statements")
+        self.objects[box_statements.objectName()] = box_statements
+        # box_statements.setStyleSheet("background-color: blue")
+        box_layout = QGridLayout(box_statements)
 
-            create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
-            # scrollarea.setStyleSheet("background-color: white")
+        create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
+        # scrollarea.setStyleSheet("background-color: white")
 
-            self.add_dialog_buttons(widget=box_statements, layout=box_layout)
-            self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
+        self.add_dialog_buttons(widget=box_statements, layout=box_layout)
+        self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
 
-            # TODO
-            combo_delete_option = create_combo(widget=self.tab, obj_name="combo_delete_option", font=self.font,
-                                               size=[200, 30], pos=[550, 280], enabled=True, stditem="Delete:",
-                                               items=["Delete one", "Delete all"])
-            combo_delete_option.installEventFilter(self)
-            self.objects[combo_delete_option.objectName()] = combo_delete_option
+        # TODO
+        combo_delete_option = create_combo(widget=self.tab, obj_name="combo_delete_option", font=self.font,
+                                           size=[200, 30], pos=[550, 280], enabled=True, stditem="Delete:",
+                                           items=["Delete one", "Delete all"])
+        combo_delete_option.installEventFilter(self)
+        self.objects[combo_delete_option.objectName()] = combo_delete_option
 
-            # TODO
-            button_delete = create_button(widget=self.tab, obj_name="button_delete", font=self.font, size=[100, 30],
-                                          pos=[550, 340], text="Delete", enabled=True)
-            button_delete.clicked.connect(self.on_delete)
-            self.objects[button_delete.objectName()] = button_delete
+        # TODO
+        button_delete = create_button(widget=self.tab, obj_name="button_delete", font=self.font, size=[100, 30],
+                                      pos=[550, 340], text="Delete", enabled=True)
+        button_delete.clicked.connect(self.on_delete)
+        self.objects[button_delete.objectName()] = button_delete
 
-            # TODO
-            tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
-                                     tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
-            self.objects[tabview.objectName()] = tabview
-            # display for generated query - pos is relative to the tabview - (-1) removes visible border
-            tb_query = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query", font=self.font,
-                                      size=[400, 275], pos=[-1, -1], enabled=True)
-            self.objects[tb_query.objectName()] = tb_query
-            tb_query_pretty = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query_pretty",
-                                             font=self.font, size=[400, 275], pos=[400, -1], enabled=True)
-            self.objects[tb_query_pretty.objectName()] = tb_query_pretty
-            # display for results - pos is relative to the tabview - (-1) removes visible border
-            tb_result = create_textbox(widget=self.objects["tab_result"], obj_name="tb_result", font=self.font,
-                                       size=[800, 275], pos=[-1, -1], enabled=True)
-            self.objects[tb_result.objectName()] = tb_result
-        except Exception as e:
-            print(e, "init_ui")
+        # TODO
+        tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
+                                 tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
+        self.objects[tabview.objectName()] = tabview
+        # display for generated query - pos is relative to the tabview - (-1) removes visible border
+        tb_query = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query", font=self.font,
+                                  size=[400, 275], pos=[-1, -1], enabled=True)
+        self.objects[tb_query.objectName()] = tb_query
+        tb_query_pretty = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query_pretty",
+                                         font=self.font, size=[400, 275], pos=[400, -1], enabled=True)
+        self.objects[tb_query_pretty.objectName()] = tb_query_pretty
+        # display for results - pos is relative to the tabview - (-1) removes visible border
+        tb_result = create_textbox(widget=self.objects["tab_result"], obj_name="tb_result", font=self.font,
+                                   size=[800, 275], pos=[-1, -1], enabled=True)
+        self.objects[tb_result.objectName()] = tb_result
 
     def update_ui(self):
         # clear UI
-        print("clearing ui")
         self.objects["tree"].clear()
         while self.amount_statements > 1:
             self.remove_last_statement(self.objects["box_statements"])
         self.objects[f"lw_select1"].clear()
         self.objects[f"combo_select1"].setCurrentIndex(0)
         self.objects[f"ib_select1"].clear()
+        update_label(widget=self, obj_name="label_type1", text="")
         self.objects["tb_query"].clear()
         self.objects["tb_query_pretty"].clear()
         self.objects["tb_result"].clear()
@@ -136,12 +128,16 @@ class WinDelete(QWidget):
 
     def on_delete(self):
         statements = {}
-        statement = {}
+        collection = self.objects[f"lw_select1"].item(0).text()
         # clear TBs first
         update_textbox(widget=self, obj_name="tb_query", text="")
         update_textbox(widget=self, obj_name="tb_query_pretty", text="")
         update_textbox(widget=self, obj_name="tb_result", text="")
         try:
+            # check for unfilled fields
+            if self.objects[f"combo_delete_option"].currentText() not in ["Delete one", "Delete all"]:
+                update_textbox(widget=self, obj_name="tb_query", text="No delete option selected", color="red")
+                return
             for i in range(1, self.amount_statements + 1):
                 if self.objects[f"lw_select{i}"].count() < 2:
                     update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
@@ -152,53 +148,45 @@ class WinDelete(QWidget):
                 if i > 1 and self.objects[f"combo_clause{i}"].currentText() not in ["and", "or"]:
                     update_textbox(widget=self, obj_name="tb_query", text="No clause selected", color="red")
                     return
-                if self.objects[f"combo_delete_option"].currentText() not in ["Delete one", "Delete all"]:
-                    update_textbox(widget=self, obj_name="tb_query", text="No delete option selected", color="red")
-                    return
-                statement = {"collection": self.objects[f"lw_select{i}"].item(0).text(),
-                             "field": self.objects[f"lw_select{i}"].item(1).text(),
+                # create statements for QueryGenerator class
+                statement = {"field": self.objects[f"lw_select{i}"].item(1).text(),
                              "option": self.objects[f"combo_select{i}"].currentText(),
-                             "text": self.objects[f"ib_select{i}"].text(),
-                             }
-                statement["expected_type"] = self.connector.get_types()[statement["collection"]][statement["field"]]
+                             "text": self.objects[f"ib_select{i}"].text()}
                 clause = self.objects[f"combo_clause{i}"].currentText() if i > 1 else ""
                 statement["clause"] = clause
                 statements[f"statement{i}"] = statement
-            q_gen = QueryGenerator(statements, self.connector.get_types()[statement["collection"]],
-                                   projections=None)
+            # create query and output strings
+            q_gen = QueryGenerator(statements)
             query = q_gen.get_query()
-            query = json_util.loads(query.replace("'", '"'))
-            projection = {}
-
+            query_string = q_gen.get_query_string()
+            query_string_pretty = q_gen.get_query_string_pretty()
             distinct = True if self.objects["combo_delete_option"].currentText() == "Delete one" else False
             if distinct:
                 delete = self.connector.delete_one
-                result = self.connector.find_one(collection=statement["collection"], query=query, projection=projection)
+                result = self.connector.find_one(collection=collection, query=query)
+                text = f"db.{collection}.deleteOne({query_string})"
+                text_pretty = f"db.{collection}.deleteOne({query_string_pretty})"
                 found = 1 if len(result) > 0 else 0
             else:
                 delete = self.connector.delete
-                result = self.connector.find(collection=statement["collection"], query=query, projection=projection)
+                result = self.connector.find(collection=collection, query=query)
+                text = f"db.{collection}.deleteMany({query_string})"
+                text_pretty = f"db.{collection}.deleteMany({query_string_pretty})"
                 found = len(result)
-
             if found == 0:
                 update_textbox(widget=self, obj_name="tb_result", text="Nothing to delete")
             else:
+                # if records were found, ask for confirmation. After that -> delete or cancel
                 reply = QMessageBox.question(self, "Please Confirm", f"Delete {found} record(s) found?",
                                              QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel)
                 if reply == QMessageBox.Yes:
-                    if distinct:
-                        text = f"db.{statement['collection']}.deleteOne({ q_gen.get_query_string()})"
-                        text_pretty = f"db.{statement['collection']}.deleteOne({ q_gen.get_query_string_pretty()})"
-                    else:
-                        text = f"db.{statement['collection']}.deleteMany({ q_gen.get_query_string()})"
-                        text_pretty = f"db.{statement['collection']}.deleteMany({ q_gen.get_query_string_pretty()})"
-                    deleted = delete(collection=statement["collection"], query=query)
+                    deleted = delete(collection=collection, query=query)
                     self.parent.update_children()
                     update_textbox(widget=self, obj_name="tb_result", text=f"{deleted} record(s) deleted\n")
-                    update_textbox(widget=self, obj_name="tb_query", text=text)
-                    update_textbox(widget=self, obj_name="tb_query_pretty", text=text_pretty)
                 else:
                     update_textbox(widget=self, obj_name="tb_result", text=f"Canceled\n")
+            update_textbox(widget=self, obj_name="tb_query", text=text)
+            update_textbox(widget=self, obj_name="tb_query_pretty", text=text_pretty)
         except json.JSONDecodeError as e:
             update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
         except Exception as e:
@@ -315,24 +303,3 @@ class WinDelete(QWidget):
         for widget in widgets:
             self.objects[widget].setParent(None)
             del self.objects[widget]
-
-    def possible_projections(self, collection):
-        projections = []
-        for key in self.connector.get_collection_entries(collection, distinct=True):
-            projections.append(key)
-        return projections
-
-    def fill_projections(self, projections):
-        self.projections.clear()
-        for projection in projections:
-            self.projections[projection] = 1
-
-    def closeEvent(self, a0: QtGui.QCloseEvent):
-        self.connector.close()
-
-    def json_serial(self, obj):
-        # source: https://stackoverflow.com/questions/11875770/how-to-overcome-datetime-datetime-not-json-serializable
-        """JSON serializer for objects not serializable by default json code"""
-        if isinstance(obj, (datetime, date)):
-            return obj.isoformat()
-        raise TypeError("Type %s not serializable" % type(obj))

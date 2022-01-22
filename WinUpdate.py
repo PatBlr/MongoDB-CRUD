@@ -34,82 +34,84 @@ class WinUpdate(QWidget):
 
     def init_ui(self):
         # create GUI
-        # TODO: Refactor Exceptions
-        try:
-            # tree with collection->value|type for
-            tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
-                               pos=[10, 10], headers=["Name", "Type"], enabled=True)
-            tree.itemDoubleClicked.connect(self.on_item_selected)
-            self.objects[tree.objectName()] = tree
+        # tree with collection->value|type for
+        tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
+                           pos=[10, 10], headers=["Name", "Type"], enabled=True)
+        tree.itemDoubleClicked.connect(self.on_item_selected)
+        self.objects[tree.objectName()] = tree
 
-            tabview_statements = create_tabview(widget=self.tab, obj_name="tabview_statements", size=[800, 250],
-                                                pos=[550, 10], tabs=["Statements", "Update"], obj_list=self.objects,
-                                                enabled=True)
-            self.objects[tabview_statements.objectName()] = tabview_statements
+        tabview_statements = create_tabview(widget=self.tab, obj_name="tabview_statements", size=[800, 250],
+                                            pos=[550, 10], tabs=["Statements", "Update"], obj_list=self.objects,
+                                            enabled=True)
+        self.objects[tabview_statements.objectName()] = tabview_statements
 
-            box_statements = QWidget(self.objects["tab_statements"])
-            box_statements.resize(770, 0)
-            box_statements.setObjectName("box_statements")
-            self.objects[box_statements.objectName()] = box_statements
-            box_layout = QGridLayout(box_statements)
+        box_statements = QWidget(self.objects["tab_statements"])
+        box_statements.resize(770, 0)
+        box_statements.setObjectName("box_statements")
+        self.objects[box_statements.objectName()] = box_statements
+        box_layout = QGridLayout(box_statements)
 
-            create_scrollarea(widget=self.objects["tab_statements"], child=box_statements, size=[800, 250], pos=[0, 0])
+        create_scrollarea(widget=self.objects["tab_statements"], child=box_statements, size=[800, 222], pos=[0, 0])
 
-            self.add_dialog_buttons(widget=box_statements, layout=box_layout)
-            self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
+        self.add_dialog_buttons(widget=box_statements, layout=box_layout)
+        self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
 
-            box_updates = QWidget(self.objects["tab_update"])
-            box_updates.resize(770, 0)
-            box_updates.setObjectName("box_updates")
-            self.objects[box_updates.objectName()] = box_updates
-            box_layout_update = QGridLayout(box_updates)
+        box_updates = QWidget(self.objects["tab_update"])
+        box_updates.resize(770, 0)
+        box_updates.setObjectName("box_updates")
+        self.objects[box_updates.objectName()] = box_updates
+        box_layout_update = QGridLayout(box_updates)
 
-            create_scrollarea(widget=self.objects["tab_update"], child=box_updates, size=[800, 250],
-                              pos=[0, 0])
+        create_scrollarea(widget=self.objects["tab_update"], child=box_updates, size=[800, 222],
+                          pos=[0, 0])
 
-            self.add_update_buttons(widget=box_updates, layout=box_layout_update)
-            self.add_update(widget=box_updates, start=100 * self.amount_updates, layout=box_layout_update)
+        self.add_update_buttons(widget=box_updates, layout=box_layout_update)
+        self.add_update(widget=box_updates, start=100 * self.amount_updates, layout=box_layout_update)
 
-            # TODO
-            combo_update_option = create_combo(widget=self.tab, obj_name="combo_update_option", font=self.font,
-                                               size=[200, 30], pos=[550, 280], enabled=True, stditem="Update:",
-                                               items=["Update one", "Update all"])
-            combo_update_option.installEventFilter(self)
-            self.objects[combo_update_option.objectName()] = combo_update_option
+        # TODO
+        combo_update_option = create_combo(widget=self.tab, obj_name="combo_update_option", font=self.font,
+                                           size=[200, 30], pos=[550, 280], enabled=True, stditem="Update:",
+                                           items=["Update one", "Update all"])
+        combo_update_option.installEventFilter(self)
+        self.objects[combo_update_option.objectName()] = combo_update_option
 
-            # TODO
-            button_update = create_button(widget=self.tab, obj_name="button_update", font=self.font, size=[100, 30],
-                                          pos=[550, 340], text="Update", enabled=True)
-            button_update.clicked.connect(self.on_update)
-            self.objects[button_update.objectName()] = button_update
+        # TODO
+        button_update = create_button(widget=self.tab, obj_name="button_update", font=self.font, size=[100, 30],
+                                      pos=[550, 340], text="Update", enabled=True)
+        button_update.clicked.connect(self.on_update)
+        self.objects[button_update.objectName()] = button_update
 
-            # TODO
-            tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
-                                     tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
-            self.objects[tabview.objectName()] = tabview
-            # display for generated query - pos is relative to the tabview - (-1) removes visible border
-            tb_query = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query", font=self.font,
-                                      size=[400, 275], pos=[-1, -1], enabled=True)
-            self.objects[tb_query.objectName()] = tb_query
-            tb_query_pretty = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query_pretty",
-                                             font=self.font, size=[400, 275], pos=[400, -1], enabled=True)
-            self.objects[tb_query_pretty.objectName()] = tb_query_pretty
-            # display for results - pos is relative to the tabview - (-1) removes visible border
-            tb_result = create_textbox(widget=self.objects["tab_result"], obj_name="tb_result", font=self.font,
-                                       size=[800, 275], pos=[-1, -1], enabled=True)
-            self.objects[tb_result.objectName()] = tb_result
-        except Exception as e:
-            print(e, "init_ui")
+        # TODO
+        tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
+                                 tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
+        self.objects[tabview.objectName()] = tabview
+        # display for generated query - pos is relative to the tabview - (-1) removes visible border
+        tb_query = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query", font=self.font,
+                                  size=[400, 275], pos=[-1, -1], enabled=True)
+        self.objects[tb_query.objectName()] = tb_query
+        tb_query_pretty = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query_pretty",
+                                         font=self.font, size=[400, 275], pos=[400, -1], enabled=True)
+        self.objects[tb_query_pretty.objectName()] = tb_query_pretty
+        # display for results - pos is relative to the tabview - (-1) removes visible border
+        tb_result = create_textbox(widget=self.objects["tab_result"], obj_name="tb_result", font=self.font,
+                                   size=[800, 275], pos=[-1, -1], enabled=True)
+        self.objects[tb_result.objectName()] = tb_result
 
     def update_ui(self):
         # clear UI
         self.objects["tree"].clear()
         while self.amount_statements > 1:
             self.remove_last_statement(self.objects["box_statements"])
+        while self.amount_updates > 1:
+            self.remove_last_update(self.objects["box_updates"])
         self.objects[f"lw_select1"].clear()
         self.objects[f"combo_select1"].setCurrentIndex(0)
         self.objects[f"ib_select1"].clear()
+        update_label(widget=self, obj_name="label_type1", text="")
+        update_label(widget=self, obj_name="label_type_update1", text="")
         self.objects["tb_query"].clear()
+        self.objects[f"lw_update1"].clear()
+        self.objects[f"ib_update1"].clear()
         self.objects["tb_query_pretty"].clear()
         self.objects["tb_result"].clear()
         # fill tree
@@ -134,12 +136,10 @@ class WinUpdate(QWidget):
         if self.objects["tabview_statements"].currentWidget().objectName() == "tab_statements":
             amount = self.amount_statements
             lw = self.objects[f"lw_select{amount}"]
-            compare_lw = self.objects[f"lw_select{amount-1}"] if amount > 1 else None
             label = self.objects[f"label_type{amount}"]
         else:
             amount = self.amount_updates
             lw = self.objects[f"lw_update{amount}"]
-            compare_lw = self.objects[f"lw_update{amount-1}"] if amount > 1 else None
             label = self.objects[f"label_type_update{amount}"]
         name = item.text(0)
         type_name = item.text(1)
@@ -151,7 +151,8 @@ class WinUpdate(QWidget):
                     name = parent.text(0) + "." + name
                 collection = parent.text(0)
                 parent = parent.parent()
-            if amount > 1 and compare_lw is not None:
+            if amount > 1:
+                compare_lw = self.objects["lw_select1"]
                 if compare_lw.item(0).text() != collection:
                     update_textbox(widget=self, obj_name="tb_query",
                                    text="Please select an item of the same collection", color="red")
@@ -163,13 +164,14 @@ class WinUpdate(QWidget):
 
     def on_update(self):
         statements = {}
-        statement = {}
         updates = []
+        collection = self.objects[f"lw_select1"].item(0).text()
         # clear TBs first
         update_textbox(widget=self, obj_name="tb_query", text="")
         update_textbox(widget=self, obj_name="tb_query_pretty", text="")
         update_textbox(widget=self, obj_name="tb_result", text="")
         try:
+            # check for unfilled fields
             if self.objects[f"combo_update_option"].currentText() not in ["Update one", "Update all"]:
                 update_textbox(widget=self, obj_name="tb_query", text="No update option selected", color="red")
                 return
@@ -183,15 +185,14 @@ class WinUpdate(QWidget):
                 if i > 1 and self.objects[f"combo_clause{i}"].currentText() not in ["and", "or"]:
                     update_textbox(widget=self, obj_name="tb_query", text="No clause selected", color="red")
                     return
-                statement = {"collection": self.objects[f"lw_select{i}"].item(0).text(),
-                             "field": self.objects[f"lw_select{i}"].item(1).text(),
+                # create statements for QueryGenerator class
+                statement = {"field": self.objects[f"lw_select{i}"].item(1).text(),
                              "option": self.objects[f"combo_select{i}"].currentText(),
-                             "text": self.objects[f"ib_select{i}"].text(),
-                             }
-                statement["expected_type"] = self.connector.get_types()[statement["collection"]][statement["field"]]
+                             "text": self.objects[f"ib_select{i}"].text()}
                 clause = self.objects[f"combo_clause{i}"].currentText() if i > 1 else ""
                 statement["clause"] = clause
                 statements[f"statement{i}"] = statement
+            # create update statements
             for i in range(1, self.amount_updates + 1):
                 if self.objects[f"lw_update{i}"].count() < 2:
                     update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
@@ -205,53 +206,47 @@ class WinUpdate(QWidget):
                     argument = f'"{argument}"'
                 update = f'"{field}": {argument}'
                 updates.append(update)
+            q_gen = QueryGenerator(statements)
+            query = q_gen.get_query()
+            query_string = q_gen.get_query_string()
+            query_string_pretty = q_gen.get_query_string_pretty()
+
+            # for each update in the list, append the update to the string
             string_updates = '{"$set": {'
             for i, elem in enumerate(updates):
                 string_updates += str(elem)
                 string_updates += ", " if i < len(updates) - 1 else ""
             string_updates += "}}"
-            string_updates_pretty = json.loads(string_updates)
-            string_updates_pretty = json.dumps(string_updates_pretty, indent=4, sort_keys=False)
-            print(string_updates_pretty)
+            string_updates_pretty = q_gen.prettify(string_updates)
             dict_updates = json.loads(string_updates)
-            q_gen = QueryGenerator(statements, self.connector.get_types()[statement["collection"]],
-                                   projections=None)
-            query = q_gen.get_query()
-            query = json_util.loads(query.replace("'", '"'))
-            projection = {}
 
             distinct = True if self.objects["combo_update_option"].currentText() == "Update one" else False
             if distinct:
                 update = self.connector.update_one
-                result = self.connector.find_one(collection=statement["collection"], query=query, projection=projection)
+                result = self.connector.find_one(collection=collection, query=query)
+                text = f"db.{collection}.updateOne({query_string}, {string_updates})"
+                text_pretty = f"db.{collection}.updateOne({query_string_pretty}, {string_updates_pretty})"
                 found = 1 if len(result) > 0 else 0
             else:
                 update = self.connector.update
-                result = self.connector.find(collection=statement["collection"], query=query, projection=projection)
+                result = self.connector.find(collection=collection, query=query)
+                text = f"db.{collection}.update({query_string}, {string_updates})"
+                text_pretty = f"db.{collection}.update({query_string_pretty}, {string_updates_pretty})"
                 found = len(result)
-
             if found == 0:
                 update_textbox(widget=self, obj_name="tb_result", text="Nothing to update")
             else:
+                # if records were found, ask for confirmation. After that -> update or cancel
                 reply = QMessageBox.question(self, "Please Confirm", f"Update {found} record(s) found?",
                                              QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel)
                 if reply == QMessageBox.Yes:
-                    updated = update(collection=statement["collection"], query=query, updates=dict_updates)
+                    updated = update(collection=collection, query=query, updates=dict_updates)
                     self.parent.update_children()
                     update_textbox(widget=self, obj_name="tb_result", text=f"{updated} record(s) updated\n")
                 else:
                     update_textbox(widget=self, obj_name="tb_result", text=f"Canceled\n")
-            if distinct:
-                text = f"db.{statement['collection']}.updateOne({q_gen.get_query_string()}, {string_updates})"
-                text_pretty = f"db.{statement['collection']}.updateOne({q_gen.get_query_string_pretty()}, " \
-                              f"{string_updates_pretty})"
-            else:
-                text = f"db.{statement['collection']}.update({q_gen.get_query_string()}, {string_updates})"
-                text_pretty = f"db.{statement['collection']}.update({q_gen.get_query_string_pretty()}, " \
-                              f"{string_updates_pretty})"
             update_textbox(widget=self, obj_name="tb_query", text=text)
-            update_textbox(widget=self, obj_name="tb_query_pretty",
-                           text=text_pretty)
+            update_textbox(widget=self, obj_name="tb_query_pretty", text=text_pretty)
         except json.JSONDecodeError as e:
             update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
         except errors.WriteError as e:
@@ -433,25 +428,3 @@ class WinUpdate(QWidget):
         for widget in widgets:
             self.objects[widget].setParent(None)
             del self.objects[widget]
-
-    def possible_projections(self, collection):
-        projections = []
-        for key in self.connector.get_collection_entries(collection, distinct=True):
-            projections.append(key)
-        return projections
-
-    def fill_projections(self, projections):
-        self.projections.clear()
-        for projection in projections:
-            self.projections[projection] = 1
-
-    # TODO
-    def closeEvent(self, a0: QtGui.QCloseEvent):
-        self.connector.close()
-
-    def json_serial(self, obj):
-        # source: https://stackoverflow.com/questions/11875770/how-to-overcome-datetime-datetime-not-json-serializable
-        """JSON serializer for objects not serializable by default json code"""
-        if isinstance(obj, (datetime, date)):
-            return obj.isoformat()
-        raise TypeError("Type %s not serializable" % type(obj))

@@ -28,51 +28,47 @@ class WinRead(QWidget):
 
     def init_ui(self):
         # create GUI
-        # TODO: Refactor Exceptions
-        try:
-            # tree with collection->name|type of current database
-            tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
-                               pos=[10, 10], headers=["Name", "Type"], enabled=True)
-            tree.itemDoubleClicked.connect(self.on_item_selected)
-            self.objects[tree.objectName()] = tree
-            # widget for statements
-            box_statements = QWidget(self.tab)
-            box_statements.resize(770, 0)
-            box_statements.setObjectName("box_statements")
-            self.objects[box_statements.objectName()] = box_statements
-            box_layout = QGridLayout(box_statements)
-            create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
-            self.add_dialog_buttons(widget=box_statements, layout=box_layout)
-            self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
-            # combobox for the projections
-            combo_projection = create_combo(widget=self.tab, obj_name="combo_projection", font=self.font,
-                                            size=[200, 30], pos=[550, 280], enabled=True, checkable=True,
-                                            stditem="Projection: (include)")
-            combo_projection.view().pressed.connect(self.on_projection_clicked)
-            combo_projection.installEventFilter(self)
-            self.objects[combo_projection.objectName()] = combo_projection
-            # button to do a find operation with specified params
-            button_find = create_button(widget=self.tab, obj_name="button_find", font=self.font, size=[100, 30],
-                                        pos=[550, 340], text="Find", enabled=True)
-            button_find.clicked.connect(self.on_find)
-            self.objects[button_find.objectName()] = button_find
-            # tabview to show generated query and result for find operation
-            tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
-                                     tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
-            self.objects[tabview.objectName()] = tabview
-            # display for generated query - pos is relative to the tabview - (-1) removes visible border
-            tb_query = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query", font=self.font,
-                                      size=[400, 275], pos=[-1, -1], enabled=True)
-            self.objects[tb_query.objectName()] = tb_query
-            tb_query_pretty = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query_pretty",
-                                             font=self.font, size=[400, 275], pos=[400, -1], enabled=True)
-            self.objects[tb_query_pretty.objectName()] = tb_query_pretty
-            # display for results - pos is relative to the tabview - (-1) removes visible border
-            tb_result = create_textbox(widget=self.objects["tab_result"], obj_name="tb_result", font=self.font,
-                                       size=[800, 275], pos=[-1, -1], enabled=True)
-            self.objects[tb_result.objectName()] = tb_result
-        except Exception as e:
-            print(e, "init_ui")
+        # tree with collection->name|type of current database
+        tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
+                           pos=[10, 10], headers=["Name", "Type"], enabled=True)
+        tree.itemDoubleClicked.connect(self.on_item_selected)
+        self.objects[tree.objectName()] = tree
+        # widget for statements
+        box_statements = QWidget(self.tab)
+        box_statements.resize(770, 0)
+        box_statements.setObjectName("box_statements")
+        self.objects[box_statements.objectName()] = box_statements
+        box_layout = QGridLayout(box_statements)
+        create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
+        self.add_dialog_buttons(widget=box_statements, layout=box_layout)
+        self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
+        # combobox for the projections
+        combo_projection = create_combo(widget=self.tab, obj_name="combo_projection", font=self.font,
+                                        size=[200, 30], pos=[550, 280], enabled=True, checkable=True,
+                                        stditem="Projection: (include)")
+        combo_projection.view().pressed.connect(self.on_projection_clicked)
+        combo_projection.installEventFilter(self)
+        self.objects[combo_projection.objectName()] = combo_projection
+        # button to do a find operation with specified params
+        button_find = create_button(widget=self.tab, obj_name="button_find", font=self.font, size=[100, 30],
+                                    pos=[550, 340], text="Find", enabled=True)
+        button_find.clicked.connect(self.on_find)
+        self.objects[button_find.objectName()] = button_find
+        # tabview to show generated query and result for find operation
+        tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
+                                 tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
+        self.objects[tabview.objectName()] = tabview
+        # display for generated query - pos is relative to the tabview - (-1) removes visible border
+        tb_query = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query", font=self.font,
+                                  size=[400, 275], pos=[-1, -1], enabled=True)
+        self.objects[tb_query.objectName()] = tb_query
+        tb_query_pretty = create_textbox(widget=self.objects["tab_query"], obj_name="tb_query_pretty",
+                                         font=self.font, size=[400, 275], pos=[400, -1], enabled=True)
+        self.objects[tb_query_pretty.objectName()] = tb_query_pretty
+        # display for results - pos is relative to the tabview - (-1) removes visible border
+        tb_result = create_textbox(widget=self.objects["tab_result"], obj_name="tb_result", font=self.font,
+                                   size=[800, 275], pos=[-1, -1], enabled=True)
+        self.objects[tb_result.objectName()] = tb_result
 
     def update_ui(self):
         # clear UI
@@ -84,6 +80,7 @@ class WinRead(QWidget):
         self.objects[f"combo_select1"].setCurrentIndex(0)
         self.objects[f"ib_select1"].clear()
         update_combo(widget=self, obj_name="combo_projection", stditem="Projection: (include)")
+        update_label(widget=self, obj_name="label_type1", text="")
         self.objects["tb_query"].clear()
         self.objects["tb_query_pretty"].clear()
         self.objects["tb_result"].clear()
@@ -181,9 +178,9 @@ class WinRead(QWidget):
             update_textbox(widget=self, obj_name="tb_query", text=text)
             update_textbox(widget=self, obj_name="tb_query_pretty", text=text_pretty)
             if len(result) == 0:
-                update_textbox(widget=self, obj_name="tb_result", text="No Result")
+                update_textbox(widget=self, obj_name="tb_result", text="No records found")
             else:
-                update_textbox(widget=self, obj_name="tb_result", text=f"{len(result)} result(s) found:\n")
+                update_textbox(widget=self, obj_name="tb_result", text=f"{len(result)} record(s) found:\n")
                 for res in result:
                     text = q_gen.prettify(res)
                     self.objects["tb_result"].append(text)
@@ -324,6 +321,3 @@ class WinRead(QWidget):
             if value == 1 or key == '_id':
                 filtered[key.replace("'", '"')] = value
         return filtered
-
-    def closeEvent(self, a0: QtGui.QCloseEvent):
-        self.connector.close()
