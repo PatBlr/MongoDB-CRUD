@@ -17,10 +17,6 @@ class WinRead(QWidget):
         super().__init__()
         self.tab = tab
         self.parent = parent
-        self.width = 1400
-        self.height = 810
-        self.resize(self.width, self.height)
-        self.setWindowTitle('MongoDB Query Generator')
         self.options = self.parent.options
         self.projections = {}
         self.amount_statements = 0
@@ -137,7 +133,7 @@ class WinRead(QWidget):
                                    text="Please select an item of the same collection", color="red")
                     return
             if type_name != "":
-                # TODO - lw select und label type aendern
+
                 update_list(widget=self, obj_name=f"lw_select{self.amount_statements}", clear=True,
                             items=[collection, name])
                 update_label(widget=self, obj_name=f"label_type{self.amount_statements}", text=type_name)
@@ -147,12 +143,13 @@ class WinRead(QWidget):
 
     def on_find(self):
         statements = {}
-        statement = {}
+        collection = self.objects[f"lw_select1"].item(0).text()
         # clear TBs first
         update_textbox(widget=self, obj_name="tb_query", text="")
         update_textbox(widget=self, obj_name="tb_query_pretty", text="")
         update_textbox(widget=self, obj_name="tb_result", text="")
         try:
+            # check for unfilled fields
             for i in range(1, self.amount_statements+1):
                 if self.objects[f"lw_select{i}"].count() < 2:
                     update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
@@ -163,38 +160,35 @@ class WinRead(QWidget):
                 if i > 1 and self.objects[f"combo_clause{i}"].currentText() not in ["and", "or"]:
                     update_textbox(widget=self, obj_name="tb_query", text="No clause selected", color="red")
                     return
-                # # need to put the text in quotes if it is a string, otherwise json can't serialize it
-                # text = self.objects[f"ib_select{i}"].text() if self.objects[f"label_type{i}"].text() != "str" \
-                #     else f"'{self.objects[f'ib_select{i}'].text()}'"
-                statement = {"collection": self.objects[f"lw_select{i}"].item(0).text(),
-                             "field": self.objects[f"lw_select{i}"].item(1).text(),
+                # create statements for QueryGenerator class
+                statement = {"field": self.objects[f"lw_select{i}"].item(1).text(),
                              "option": self.objects[f"combo_select{i}"].currentText(),
-                             "text": self.objects[f"ib_select{i}"].text(),
-                             }
-                statement["expected_type"] = self.connector.get_types()[statement["collection"]][statement["field"]]
+                             "text": self.objects[f"ib_select{i}"].text()}
                 clause = self.objects[f"combo_clause{i}"].currentText() if i > 1 else ""
                 statement["clause"] = clause
                 statements[f"statement{i}"] = statement
-            qgenerator = QueryGenerator(statements, self.connector.get_types()[statement["collection"]],
-                                        self.projections)
-            query = qgenerator.get_query()
-            print(query)
-            query = json_util.loads(query.replace("'", '"'))
-            projection = qgenerator.get_projection()
-            result = self.connector.find(collection=statement["collection"], query=query, projection=projection)
-            update_textbox(widget=self, obj_name="tb_query", text=qgenerator.get_query_string())
-            update_textbox(widget=self, obj_name="tb_query_pretty", text=qgenerator.get_query_string_pretty())
-            update_textbox(widget=self, obj_name="tb_result", text="")
+            # create query and output strings
+            q_gen = QueryGenerator(statements)
+            query = q_gen.get_query()
+            query_string = q_gen.get_query_string()
+            query_string_pretty = q_gen.get_query_string_pretty()
+            projection = self.__filter_projection(self.projections)
+            projection_pretty = q_gen.prettify(projection)
+            text = f"db.{collection}.find({query_string}, {projection})"
+            text_pretty = f"db.{collection}.find({query_string_pretty}, {projection_pretty})"
+            # do a search operation with prepared query and projection
+            result = self.connector.find(collection=collection, query=query, projection=projection)
+            update_textbox(widget=self, obj_name="tb_query", text=text)
+            update_textbox(widget=self, obj_name="tb_query_pretty", text=text_pretty)
             if len(result) == 0:
                 update_textbox(widget=self, obj_name="tb_result", text="No Result")
             else:
                 update_textbox(widget=self, obj_name="tb_result", text=f"{len(result)} result(s) found:\n")
                 for res in result:
-                    text = json.dumps(res, indent=4, sort_keys=False, default=self.json_serial)
+                    text = q_gen.prettify(res)
                     self.objects["tb_result"].append(text)
         except json.JSONDecodeError as e:
-            update_textbox(widget=self, obj_name="tb_query", text=str(e)+"\nPossible mistakes:\n"
-                                                                         "Bools: [true/false]\n", color="red")
+            update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
         except Exception as e:
             print(e, "in on_find")
 
@@ -321,12 +315,15 @@ class WinRead(QWidget):
         for projection in projections:
             self.projections[projection] = 1
 
+    def __filter_projection(self, projections):
+        # cannot do inclusion in exclusion projection and vice versa
+        # filter out included projections (key = 1) and append it to the dict
+        # _id may be in or excluded, so include it every time, despite it's value
+        filtered = {}
+        for key, value in projections.items():
+            if value == 1 or key == '_id':
+                filtered[key.replace("'", '"')] = value
+        return filtered
+
     def closeEvent(self, a0: QtGui.QCloseEvent):
         self.connector.close()
-
-    def json_serial(self, obj):
-        # source: https://stackoverflow.com/questions/11875770/how-to-overcome-datetime-datetime-not-json-serializable
-        """JSON serializer for objects not serializable by default json code"""
-        if isinstance(obj, (datetime, date)):
-            return obj.isoformat()
-        raise TypeError("Type %s not serializable" % type(obj))
