@@ -6,10 +6,14 @@ import DBExceptions
 
 class QueryGenerator:
 
-    def __init__(self, statements, types, projections):
+    def __init__(self, statements, types, projections=None):
         self.statements = statements
         self.types = types
-        self.projection = self.__filter_projection(projections)
+        if projections is not None:
+            self.projection = self.__filter_projection(projections)
+        else:
+            self.projection = {}
+
         self.options = {
                 # resolving table
                 # uses string formatting (str.format(argument=...)) to replace {argument} with text contents
@@ -21,9 +25,9 @@ class QueryGenerator:
                 "less or equal": {"name": "$lte", "argument": "{argument}"},
                 "in": {"name": "$in", "argument": "{argument}"},
                 "not in": {"name": "$nin", "argument": "{argument}"},
-                "starts with": {"name": "$regex", "argument": "^{argument}", "options": "m"},
-                "ends with": {"name": "$regex", "argument": "{argument}$", "options": "m"},
-                "contains": {"name": "$regex", "argument": "{argument}", "options": ""}
+                "starts with": {"name": "$regex", "argument": "/^{argument}/", "options": "m"},
+                "ends with": {"name": "$regex", "argument": "/{argument}$/", "options": "m"},
+                "contains": {"name": "$regex", "argument": "/{argument}/", "options": ""}
             }
         self.query_string = ""
         self.query_string_pretty = ""
@@ -50,6 +54,8 @@ class QueryGenerator:
             or_statements = []
             self.__link_ands(ands)
             found = False
+            # searches through all entries in ands to look if statement{i} is in ands
+            # if it's not -> must be an or statement so append it to or_statements
             for i in range(1, len(self.statements)+1):
                 for liste in ands.values():
                     if f"statement{i}" in liste:
@@ -93,8 +99,6 @@ class QueryGenerator:
             print(e)
 
     def __generate_string(self, statement, option, argument):
-        if option == "$regex":
-            argument = f"'/{argument}/{self.options[statement['option']]['options']}'"
         query = f"{{'{statement['field']}': {{'{option}': {argument}}}}}"
         return query
 
@@ -140,17 +144,25 @@ class QueryGenerator:
 
     def __add_returns(self, query_string):
         self.query = query_string
-        self.query_string = f"{query_string}, {self.projection}"
-        print("query",self.query)
-        print("query_string",query_string, type(query_string))
+        if self.projection != {}:
+            self.query_string = f"{query_string}, {self.projection}"
+        else:
+            self.query_string = f"{query_string}"
         projection = json.loads(str(self.projection).replace("'", '"'))
-        print("proje", projection)
-        query_string = query_string.replace("'", '"')
-        print("query_string", query_string, type(query_string))
-        query_string = json.loads(query_string.replace("'", '"'))
-        print("neuer qstring", query_string)
-        self.query_string_pretty = f"{json.dumps(query_string, indent=4, sort_keys=False)}, " \
-                                   f"{json.dumps(projection, indent=4, sort_keys=False)}"
+        print("query_string", query_string)
+        try:
+            query_string = query_string.replace("'", '"')
+            query_string = json.loads(query_string.replace("'", '"'))
+        except json.decoder.JSONDecodeError as e:
+            print(e, type(e))
+        print("query_string_after", query_string)
+        if self.projection != {}:
+            print("pretty", self.query_string_pretty)
+            self.query_string_pretty = f"{json.dumps(query_string, indent=4, sort_keys=False)}, " \
+                                       f"{json.dumps(projection, indent=4, sort_keys=False)}"
+            print("pretty_after", self.query_string_pretty)
+        else:
+            self.query_string_pretty = f"{json.dumps(query_string, indent=4, sort_keys=False)}"
         # a bit of cheating here, json_util can't resolve regex /.../x, so "/.../x" need it's quotes to be removed
         occ = self.__deep_search_dict(query_string, "$regex")
         for value in occ:
@@ -175,17 +187,21 @@ class QueryGenerator:
         return occurrences
 
     def __tidy_up_regex(self, string, text):
+        # replaces the '' around any string
+        # meant to remove '' around regex inside of statement
         string = string.replace(f"'{text}'", text)
         string = string.replace(f'"{text}"', text)
         return string
 
     def __remove_regex(self, string, text):
+        # removes the JS regex indicators // and the option from a string
         string = string.replace(f"{text}", text.replace("/m", "").replace("/", ""))
         string = string.replace(f'"{text}"', text)
         return string
 
     def __filter_projection(self, projections):
         # cannot do inclusion in exclusion projection and vice versa
+        # filter out included projections (key = 1) and append it to the dict
         filtered = {}
         for key, value in projections.items():
             if value == 1 or key == '_id':
@@ -202,5 +218,10 @@ class QueryGenerator:
         return option
 
     def __resolve_argument(self, argument, text):
-        argument = self.options[argument]["argument"]
-        return argument.format(argument=text)
+        argument = self.options[argument]["argument"].format(argument=text)
+        # if the argument is not serializable by json, enclose it in quotes
+        try:
+            json.loads(argument)
+        except json.JSONDecodeError:
+            argument = f"'{argument}'"
+        return argument

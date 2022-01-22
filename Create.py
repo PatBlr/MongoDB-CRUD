@@ -20,9 +20,9 @@ def create_label(widget, obj_name, font, text, size, pos, color="black", enabled
 def update_label(widget, obj_name, font=None, text=None, size=None, pos=None, color=None):
     check_prerequisites(widget)
     try:
-        label = widget.obj[obj_name]
+        label = widget.objects[obj_name]
     except KeyError:
-        raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.obj")
+        raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.objects")
     if font is not None:
         label.setFont(font)
     if text is not None:
@@ -49,9 +49,9 @@ def create_inputbox(widget, obj_name, font, size, pos, text=None, color="black",
 def update_inputbox(widget, obj_name, font=None, text=None, size=None, pos=None, color=None, enabled=None):
     check_prerequisites(widget)
     try:
-        ib = widget.obj[obj_name]
+        ib = widget.objects[obj_name]
     except KeyError:
-        raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.obj")
+        raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.objects")
     if font is not None:
         ib.setFont(font)
     if text is not None:
@@ -79,7 +79,7 @@ def create_button(widget, obj_name, font, size, pos, text, color="black", enable
 
 def update_button(widget, obj_name, font=None, size=None, pos=None, text=None, color=None, enabled=None):
     check_prerequisites(widget)
-    button = widget.obj[obj_name]
+    button = widget.objects[obj_name]
     try:
         if font is not None:
             button.setFont(font)
@@ -124,9 +124,9 @@ def update_combo(widget, obj_name, font=None, size=None, pos=None, color=None, e
                  checkable=False, stditem=""):
     check_prerequisites(widget)
     try:
-        combo = widget.obj[obj_name]
+        combo = widget.objects[obj_name]
     except KeyError:
-        raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.obj")
+        raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.objects")
     combo.clear()
     if font is not None:
         combo.setFont(font)
@@ -167,9 +167,9 @@ def update_textbox(widget, obj_name, font=None, size=None, pos=None, text=None, 
     try:
         check_prerequisites(widget)
         try:
-            tb = widget.obj[obj_name]
+            tb = widget.objects[obj_name]
         except KeyError:
-            raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.obj")
+            raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.objects")
         if font is not None:
             tb.setFont(font)
         if size is not None:
@@ -205,9 +205,9 @@ def update_tree(widget, obj_name, font=None, size=None, pos=None, headers=None, 
     try:
         check_prerequisites(widget)
         try:
-            tree = widget.obj[obj_name]
+            tree = widget.objects[obj_name]
         except KeyError:
-            raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.obj")
+            raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.objects")
         if font is not None:
             tree.setFont(font)
         if size is not None:
@@ -245,9 +245,9 @@ def update_list(widget, obj_name, font=None, size=None, pos=None, color=None, en
     try:
         check_prerequisites(widget)
         try:
-            lw = widget.obj[obj_name]
+            lw = widget.objects[obj_name]
         except KeyError:
-            raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.obj")
+            raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.objects")
         if clear:
             lw.clear()
         if font is not None:
@@ -296,9 +296,9 @@ def update_tabview(widget, obj_name, size=None, pos=None, enabled=None):
     try:
         check_prerequisites(widget)
         try:
-            tv = widget.obj[obj_name]
+            tv = widget.objects[obj_name]
         except KeyError:
-            raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.obj")
+            raise DBExceptions.UnexpectedValue(f"No value {obj_name} in widget.objects")
         if size is not None:
             update_size(tv, size)
         if pos is not None:
@@ -321,7 +321,7 @@ def check_prerequisites(widget):
     if widget is None:
         raise DBExceptions.NoneType("Widget is None")
     try:
-        len(widget.obj)
+        len(widget.objects)
     except AttributeError:
         raise DBExceptions.NoneType("No object list available")
 
