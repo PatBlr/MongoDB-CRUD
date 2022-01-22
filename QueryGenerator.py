@@ -1,24 +1,27 @@
-from bson import json_util
 import json
 from collections import defaultdict
+from datetime import date, datetime
 import DBExceptions
 
 
 class QueryGenerator:
 
-    def __init__(self, statements, types, projections=None):
-        self.statements = statements
-        self.types = types
-        if projections is not None:
-            self.projection = self.__filter_projection(projections)
-        else:
-            self.projection = {}
-
+    def __init__(self, statements: dict):
+        """
+        Resolves a dict of statements to a query, usable by the mongosh, a normal string representation of this query
+        and a prettified (indented) version of this string\n
+        :param statements: dict of statements
+            keys MUST be named statement1 to statementN,
+            values MUST be dict containing following keys:
+            "field" (e.g. _id),
+            "option" (e.g. equals, does not equal, etc...) and
+            "text" (compare string)
+        """
         self.options = {
                 # resolving table
                 # uses string formatting (str.format(argument=...)) to replace {argument} with text contents
-                "does not equal": {"name": "$ne", "argument": "{argument}"},
                 "equals": {"name": "$eq", "argument": "{argument}"},
+                "does not equal": {"name": "$ne", "argument": "{argument}"},
                 "greater than": {"name": "$gt", "argument": "{argument}"},
                 "less than": {"name": "$lt", "argument": "{argument}"},
                 "greater or equal": {"name": "$gte", "argument": "{argument}"},
@@ -29,9 +32,10 @@ class QueryGenerator:
                 "ends with": {"name": "$regex", "argument": "/{argument}$/", "options": "m"},
                 "contains": {"name": "$regex", "argument": "/{argument}/", "options": ""}
             }
+        self.statements = statements
+        self.query = ""
         self.query_string = ""
         self.query_string_pretty = ""
-        self.query = ""
         self.__generate()
 
     def get_query(self):
@@ -42,9 +46,6 @@ class QueryGenerator:
 
     def get_query_string_pretty(self):
         return self.query_string_pretty
-
-    def get_projection(self):
-        return self.projection
 
     def __generate(self):
         if len(self.statements) > 1:
@@ -115,60 +116,40 @@ class QueryGenerator:
 
     def __generate_query(self, or_statements, and_statements):
         string = ""
-        i = 1
         if len(or_statements) > 0:
-            for statement in or_statements:
+            for i, statement in enumerate(or_statements):
                 string += statement
-                if i < len(or_statements):
+                if i < len(or_statements) - 1:
                     string += ", "
-                i += 1
             if len(and_statements) > 0:
                 string += ", "
-        i = 1
         if len(and_statements) > 0:
-            for statement in and_statements:
+            for i, statement in enumerate(and_statements):
                 if len(or_statements) > 0:
                     string += f"{{{statement}}}"
                 else:
                     string += f"{statement}"
-                if i < len(and_statements):
+                if i < len(and_statements) - 1:
                     string += ", "
-                i += 1
-
         if len(or_statements) > 0:
             query = f'{{"$or": [{string}]}}'
         else:
             query = f"{{{string}}}"
-
         return query
 
     def __add_returns(self, query_string):
+        query_string = query_string.replace("'", '"')
         self.query = query_string
-        if self.projection != {}:
-            self.query_string = f"{query_string}, {self.projection}"
-        else:
-            self.query_string = f"{query_string}"
-        projection = json.loads(str(self.projection).replace("'", '"'))
-        print("query_string", query_string)
-        try:
-            query_string = query_string.replace("'", '"')
-            query_string = json.loads(query_string.replace("'", '"'))
-        except json.decoder.JSONDecodeError as e:
-            print(e, type(e))
-        print("query_string_after", query_string)
-        if self.projection != {}:
-            print("pretty", self.query_string_pretty)
-            self.query_string_pretty = f"{json.dumps(query_string, indent=4, sort_keys=False)}, " \
-                                       f"{json.dumps(projection, indent=4, sort_keys=False)}"
-            print("pretty_after", self.query_string_pretty)
-        else:
-            self.query_string_pretty = f"{json.dumps(query_string, indent=4, sort_keys=False)}"
+        self.query_string = query_string
+        self.query_string_pretty = self.prettify(query_string)
+        query_string = json.loads(query_string.replace("'", '"'))
         # a bit of cheating here, json_util can't resolve regex /.../x, so "/.../x" need it's quotes to be removed
         occ = self.__deep_search_dict(query_string, "$regex")
         for value in occ:
+            self.query = self.__remove_regex(self.query, value)
             self.query_string = self.__tidy_up_regex(self.query_string, value)
             self.query_string_pretty = self.__tidy_up_regex(self.query_string_pretty, value)
-            self.query = self.__remove_regex(self.query, value)
+        self.query = json.loads(self.query)
 
     def __deep_search_dict(self, dic, searchkey, occurrences=None):
         if occurrences is None:
@@ -199,15 +180,6 @@ class QueryGenerator:
         string = string.replace(f'"{text}"', text)
         return string
 
-    def __filter_projection(self, projections):
-        # cannot do inclusion in exclusion projection and vice versa
-        # filter out included projections (key = 1) and append it to the dict
-        filtered = {}
-        for key, value in projections.items():
-            if value == 1 or key == '_id':
-                filtered[key.replace("'", '"')] = value
-        return filtered
-
     def __resolve_clause(self, clause):
         if clause in ["and", "or"]:
             clause = "$and" if clause == "and" else "$or"
@@ -225,3 +197,17 @@ class QueryGenerator:
         except json.JSONDecodeError:
             argument = f"'{argument}'"
         return argument
+
+    def prettify(self, statement):
+        if isinstance(statement, str):
+            statement = statement.replace("'", '"')
+            statement = json.loads(statement)
+        statement = f"{json.dumps(statement, indent=4, sort_keys=False, default=self.__json_serial)}"
+        return statement
+
+    def __json_serial(self, obj):
+        # source: https://stackoverflow.com/questions/11875770/how-to-overcome-datetime-datetime-not-json-serializable
+        """JSON serializer for objects not serializable by default json code"""
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        raise TypeError("Type %s not serializable" % type(obj))
