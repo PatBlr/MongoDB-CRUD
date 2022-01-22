@@ -6,6 +6,10 @@ import DBExceptions
 
 class DBConnector:
     def __init__(self):
+        """
+        Can connect to a MongoDB Server by calling the connect() function.\n
+        Provides CRUD operations on the connection
+        """
         self.client = None
         self.db = None
         self.list_dbs = []
@@ -91,7 +95,7 @@ class DBConnector:
         except Exception as e:
             raise DBExceptions.ConnectionFailure(e)
 
-    def find(self, collection: str, query: dict, projection: dict) -> list:
+    def find(self, collection: str, query: dict, projection: dict = None) -> list:
         """
         Equivalent to the MongoDB find() function\n
         :param collection: String of the collection to search in
@@ -100,6 +104,8 @@ class DBConnector:
         :return: list of results - each result is a dict
         """
         ret = []
+        if projection is None:
+            projection = {}
         try:
             result = self.db[collection].find(query, projection)
             for x in result:
@@ -108,7 +114,7 @@ class DBConnector:
             print(e, "in find")
         return ret
 
-    def find_one(self, collection: str, query: dict, projection: dict) -> list:
+    def find_one(self, collection: str, query: dict, projection: dict = None) -> list:
         """
         Equivalent to the MongoDB findOne() function\n
         :param collection: String of the collection to search in
@@ -117,6 +123,8 @@ class DBConnector:
         :return: list containing first found entry as dict
         """
         ret = []
+        if projection is None:
+            projection = {}
         try:
             result = self.db[collection].find_one(query, projection)
             for res in result:
