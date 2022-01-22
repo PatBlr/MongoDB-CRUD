@@ -10,12 +10,15 @@ class QueryGenerator:
         """
         Resolves a dict of statements to a query, usable by the mongosh, a normal string representation of this query
         and a prettified (indented) version of this string\n
-        :param statements: dict of statements
+        :param statements: dict of statements -
             keys MUST be named statement1 to statementN,
             values MUST be dict containing following keys:
             "field" (e.g. _id),
             "option" (e.g. equals, does not equal, etc...) and
             "text" (compare string)
+            example: {statement1: {"field": "_id", "option": "equals", "text": "01"}}
+            provided options are: equals, does not equal, grater than, less than, greater or equal, less or equal,
+            in, not in, starts with, ends with, contains
         """
         self.options = {
                 # resolving table
