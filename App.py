@@ -1,5 +1,4 @@
-import sys
-from PyQt5.QtWidgets import (QApplication, QWidget)
+from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QEvent
 import DBExceptions
@@ -7,9 +6,16 @@ import DBExceptions
 from WinRead import WinRead
 from WinUpdate import WinUpdate
 from WinDelete import WinDelete
-from Create import (create_label, update_label, create_inputbox, create_button,
-                    create_combo, update_combo,
-                    create_tabview, update_tabview)
+from Create import (
+    create_label,
+    update_label,
+    create_inputbox,
+    create_button,
+    create_combo,
+    update_combo,
+    create_tabview,
+    update_tabview
+)
 from DBConnector import DBConnector
 
 
@@ -37,6 +43,7 @@ class App(QWidget):
         self.font = QFont()
         self.font.setPointSize(9)
         self.connector = DBConnector()
+        # self.win_create = None
         self.win_read = None
         self.win_update = None
         self.win_delete = None
@@ -65,7 +72,6 @@ class App(QWidget):
         tabview = create_tabview(widget=self, obj_name="tabview", size=[self.width, self.height], pos=[0, 100],
                                  tabs=["Create", "Read", "Update", "Delete"], enabled=False, obj_list=self.objects)
         self.objects[tabview.objectName()] = tabview
-
         # self.win_create = WinCreate(self.objects["tab_read"], self.connector, self.options)
         self.win_read = WinRead(self.objects["tab_read"], self)
         self.win_update = WinUpdate(self.objects["tab_update"], self)
@@ -100,7 +106,6 @@ class App(QWidget):
     def __on_db_changed(self, value):
         # pyqtSlot for combo_dbs
         # on index change fill treeview beneath with all collections and it's fields
-        # TODO: Refactor Exceptions
         if value == "Database:" or value == "":
             return
         try:
@@ -109,10 +114,9 @@ class App(QWidget):
             self.connector.update_types()
             self.update_children()
         except Exception as e:
-            print(e)
+            update_label(widget=self, obj_name="label_connect", text=str(e))
 
     def update_children(self):
-        # TODO: Update child widgets
         # if self.win_create is not None:
         #     self.win_create.update_ui()
         if self.win_read is not None:
@@ -121,13 +125,3 @@ class App(QWidget):
             self.win_update.update_ui()
         if self.win_delete is not None:
             self.win_delete.update_ui()
-
-def main():
-    app = QApplication(sys.argv)
-    demo = App()
-    demo.show()
-    sys.exit(app.exec_())
-
-
-if __name__ == "__main__":
-    main()
