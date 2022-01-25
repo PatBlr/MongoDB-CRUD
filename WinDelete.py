@@ -1,14 +1,27 @@
 import json
-from datetime import datetime, date
-from bson import json_util
-from PyQt5 import QtGui
-from PyQt5.QtWidgets import (QTreeWidgetItem, QWidget, QGridLayout, QMessageBox)
+from PyQt5.QtWidgets import (
+    QTreeWidgetItem,
+    QWidget,
+    QGridLayout,
+    QMessageBox
+)
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QEvent
-import DBExceptions
-from Create import (create_label, update_label, create_inputbox, create_button, update_button, create_combo,
-                    create_textbox, update_textbox, create_tree, create_list, update_list, create_tabview,
-                    create_scrollarea)
+from Create import (
+    create_label,
+    update_label,
+    create_inputbox,
+    create_button,
+    update_button,
+    create_combo,
+    create_textbox,
+    update_textbox,
+    create_tree,
+    create_list,
+    update_list,
+    create_tabview,
+    create_scrollarea
+)
 from QueryGenerator import QueryGenerator
 
 
@@ -33,34 +46,27 @@ class WinDelete(QWidget):
                            pos=[10, 10], headers=["Name", "Type"], enabled=True)
         tree.itemDoubleClicked.connect(self.on_item_selected)
         self.objects[tree.objectName()] = tree
-
+        # scrollarea to add statements and dialog buttons to
         box_statements = QWidget(self.tab)
         box_statements.resize(770, 0)
         box_statements.setObjectName("box_statements")
         self.objects[box_statements.objectName()] = box_statements
-        # box_statements.setStyleSheet("background-color: blue")
         box_layout = QGridLayout(box_statements)
-
         create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
-        # scrollarea.setStyleSheet("background-color: white")
-
         self.add_dialog_buttons(widget=box_statements, layout=box_layout)
         self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
-
-        # TODO
+        # combobox to choose the delete option
         combo_delete_option = create_combo(widget=self.tab, obj_name="combo_delete_option", font=self.font,
                                            size=[200, 30], pos=[550, 280], enabled=True, stditem="Delete:",
                                            items=["Delete one", "Delete all"])
         combo_delete_option.installEventFilter(self)
         self.objects[combo_delete_option.objectName()] = combo_delete_option
-
-        # TODO
+        # button for the delete operation
         button_delete = create_button(widget=self.tab, obj_name="button_delete", font=self.font, size=[100, 30],
                                       pos=[550, 340], text="Delete", enabled=True)
         button_delete.clicked.connect(self.on_delete)
         self.objects[button_delete.objectName()] = button_delete
-
-        # TODO
+        # tabview to hold the query tab and the result tab
         tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
                                  tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
         self.objects[tabview.objectName()] = tabview

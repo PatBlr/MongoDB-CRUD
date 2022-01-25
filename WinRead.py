@@ -1,14 +1,27 @@
 import json
-from datetime import datetime, date
-from bson import json_util
-from PyQt5 import QtGui
-from PyQt5.QtWidgets import (QTreeWidgetItem, QWidget, QGridLayout)
+from PyQt5.QtWidgets import (
+    QTreeWidgetItem,
+    QWidget,
+    QGridLayout
+)
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QEvent
-import DBExceptions
-from Create import (create_label, update_label, create_inputbox, create_button, update_button, create_combo,
-                    update_combo, create_textbox, update_textbox, create_tree, create_list, update_list, create_tabview,
-                    create_scrollarea)
+from Create import (
+    create_label,
+    update_label,
+    create_inputbox,
+    create_button,
+    update_button,
+    create_combo,
+    update_combo,
+    create_textbox,
+    update_textbox,
+    create_tree,
+    create_list,
+    update_list,
+    create_tabview,
+    create_scrollarea
+)
 from QueryGenerator import QueryGenerator
 
 
@@ -33,7 +46,7 @@ class WinRead(QWidget):
                            pos=[10, 10], headers=["Name", "Type"], enabled=True)
         tree.itemDoubleClicked.connect(self.on_item_selected)
         self.objects[tree.objectName()] = tree
-        # widget for statements
+        # scrollarea to hold the statements
         box_statements = QWidget(self.tab)
         box_statements.resize(770, 0)
         box_statements.setObjectName("box_statements")

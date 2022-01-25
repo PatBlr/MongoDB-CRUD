@@ -1,15 +1,28 @@
 import json
 from pymongo import errors
-from datetime import datetime, date
-from bson import json_util
-from PyQt5 import QtGui
-from PyQt5.QtWidgets import (QTreeWidgetItem, QWidget, QGridLayout, QMessageBox)
+from PyQt5.QtWidgets import (
+    QTreeWidgetItem,
+    QWidget,
+    QGridLayout,
+    QMessageBox
+)
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QEvent
-import DBExceptions
-from Create import (create_label, update_label, create_inputbox, create_button, update_button, create_combo,
-                    create_textbox, update_textbox, create_tree, create_list, update_list, create_tabview,
-                    create_scrollarea)
+from Create import (
+    create_label,
+    update_label,
+    create_inputbox,
+    create_button,
+    update_button,
+    create_combo,
+    create_textbox,
+    update_textbox,
+    create_tree,
+    create_list,
+    update_list,
+    create_tabview,
+    create_scrollarea
+)
 from QueryGenerator import QueryGenerator
 
 
@@ -44,44 +57,37 @@ class WinUpdate(QWidget):
                                             pos=[550, 10], tabs=["Statements", "Update"], obj_list=self.objects,
                                             enabled=True)
         self.objects[tabview_statements.objectName()] = tabview_statements
-
+        # scrollarea to add the statements to
         box_statements = QWidget(self.objects["tab_statements"])
         box_statements.resize(770, 0)
         box_statements.setObjectName("box_statements")
         self.objects[box_statements.objectName()] = box_statements
         box_layout = QGridLayout(box_statements)
-
         create_scrollarea(widget=self.objects["tab_statements"], child=box_statements, size=[800, 222], pos=[0, 0])
-
         self.add_dialog_buttons(widget=box_statements, layout=box_layout)
         self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
-
+        # scrollarea to add the updates to
         box_updates = QWidget(self.objects["tab_update"])
         box_updates.resize(770, 0)
         box_updates.setObjectName("box_updates")
         self.objects[box_updates.objectName()] = box_updates
         box_layout_update = QGridLayout(box_updates)
-
         create_scrollarea(widget=self.objects["tab_update"], child=box_updates, size=[800, 222],
                           pos=[0, 0])
-
         self.add_update_buttons(widget=box_updates, layout=box_layout_update)
         self.add_update(widget=box_updates, start=100 * self.amount_updates, layout=box_layout_update)
-
-        # TODO
+        # combobox to choose the update option
         combo_update_option = create_combo(widget=self.tab, obj_name="combo_update_option", font=self.font,
                                            size=[200, 30], pos=[550, 280], enabled=True, stditem="Update:",
                                            items=["Update one", "Update all"])
         combo_update_option.installEventFilter(self)
         self.objects[combo_update_option.objectName()] = combo_update_option
-
-        # TODO
+        # button for the update operation
         button_update = create_button(widget=self.tab, obj_name="button_update", font=self.font, size=[100, 30],
                                       pos=[550, 340], text="Update", enabled=True)
         button_update.clicked.connect(self.on_update)
         self.objects[button_update.objectName()] = button_update
-
-        # TODO
+        # tabview to hold the query tab and the result tab
         tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
                                  tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
         self.objects[tabview.objectName()] = tabview
