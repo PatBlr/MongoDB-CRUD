@@ -1,7 +1,12 @@
+"""
+    Copyright (C) 2022, Patrick Bleeker
+    This program comes with ABSOLUTELY NO WARRANTY;
+    See full notice at Main.py
+"""
+
 import json
 from collections import defaultdict
 from datetime import date, datetime
-import DBExceptions
 
 
 class QueryGenerator:

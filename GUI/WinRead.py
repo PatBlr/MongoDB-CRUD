@@ -1,19 +1,25 @@
+"""
+    Copyright (C) 2022, Patrick Bleeker
+    This program comes with ABSOLUTELY NO WARRANTY;
+    See full notice at Main.py
+"""
+
 import json
 from PyQt5.QtWidgets import (
     QTreeWidgetItem,
     QWidget,
-    QGridLayout,
-    QMessageBox
+    QGridLayout
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QEvent
-from Create import (
+from Utility.Create import (
     create_label,
     update_label,
     create_inputbox,
     create_button,
     update_button,
     create_combo,
+    update_combo,
     create_textbox,
     update_textbox,
     create_tree,
@@ -22,10 +28,10 @@ from Create import (
     create_tabview,
     create_scrollarea
 )
-from QueryGenerator import QueryGenerator
+from Utility.QueryGenerator import QueryGenerator
 
 
-class WinDelete(QWidget):
+class WinRead(QWidget):
     def __init__(self, tab, parent):
         super().__init__()
         self.tab = tab
@@ -41,12 +47,12 @@ class WinDelete(QWidget):
 
     def init_ui(self):
         # create GUI
-        # tree with collection->value|type for
+        # tree with collection->name|type of current database
         tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
-                           pos=[10, 10], headers=["Name", "Type"], enabled=True)
+                           pos=[10, 10], headers=["Field", "Type"], enabled=True)
         tree.itemDoubleClicked.connect(self.on_item_selected)
         self.objects[tree.objectName()] = tree
-        # scrollarea to add statements and dialog buttons to
+        # scrollarea to hold the statements
         box_statements = QWidget(self.tab)
         box_statements.resize(770, 0)
         box_statements.setObjectName("box_statements")
@@ -55,18 +61,19 @@ class WinDelete(QWidget):
         create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
         self.add_dialog_buttons(widget=box_statements, layout=box_layout)
         self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
-        # combobox to choose the delete option
-        combo_delete_option = create_combo(widget=self.tab, obj_name="combo_delete_option", font=self.font,
-                                           size=[200, 30], pos=[550, 280], enabled=True, stditem="Delete:",
-                                           items=["Delete one", "Delete all"])
-        combo_delete_option.installEventFilter(self)
-        self.objects[combo_delete_option.objectName()] = combo_delete_option
-        # button for the delete operation
-        button_delete = create_button(widget=self.tab, obj_name="button_delete", font=self.font, size=[100, 30],
-                                      pos=[550, 340], text="Delete", enabled=True)
-        button_delete.clicked.connect(self.on_delete)
-        self.objects[button_delete.objectName()] = button_delete
-        # tabview to hold the query tab and the result tab
+        # combobox for the projections
+        combo_projection = create_combo(widget=self.tab, obj_name="combo_projection", font=self.font,
+                                        size=[200, 30], pos=[550, 280], enabled=True, checkable=True,
+                                        stditem="Projection: (include)")
+        combo_projection.view().pressed.connect(self.on_projection_clicked)
+        combo_projection.installEventFilter(self)
+        self.objects[combo_projection.objectName()] = combo_projection
+        # button to do a find operation with specified params
+        button_find = create_button(widget=self.tab, obj_name="button_find", font=self.font, size=[100, 30],
+                                    pos=[550, 340], text="Find", enabled=True)
+        button_find.clicked.connect(self.on_find)
+        self.objects[button_find.objectName()] = button_find
+        # tabview to show generated query and result for find operation
         tabview = create_tabview(widget=self.tab, obj_name="tabview", size=[800, 300], pos=[550, 380],
                                  tabs=["Query", "Result"], enabled=True, obj_list=self.objects)
         self.objects[tabview.objectName()] = tabview
@@ -90,6 +97,7 @@ class WinDelete(QWidget):
         self.objects[f"lw_select1"].clear()
         self.objects[f"combo_select1"].setCurrentIndex(0)
         self.objects[f"ib_select1"].clear()
+        update_combo(widget=self, obj_name="combo_projection", stditem="Projection: (include)")
         update_label(widget=self, obj_name="label_type1", text="")
         self.objects["tb_query"].clear()
         self.objects["tb_query_pretty"].clear()
@@ -108,6 +116,18 @@ class WinDelete(QWidget):
         if event.type() == QEvent.Wheel:
             return True
         return False
+
+    def on_projection_clicked(self, index):
+        # pyqtSlot for combo_projection
+        # on click toggle checkstate and remove from / append to projection list
+        item = self.objects["combo_projection"].model().itemFromIndex(index)
+        if not item.text() == "Projection: (include)":
+            if item.checkState() == Qt.Checked:
+                self.projections[item.text()] = 0
+                item.setCheckState(Qt.Unchecked)
+            else:
+                self.projections[item.text()] = 1
+                item.setCheckState(Qt.Checked)
 
     def on_item_selected(self, item):
         # pyqtSlot for tree
@@ -128,11 +148,15 @@ class WinDelete(QWidget):
                                    text="Please select an item of the same collection", color="red")
                     return
             if type_name != "":
+
                 update_list(widget=self, obj_name=f"lw_select{self.amount_statements}", clear=True,
                             items=[collection, name])
-                update_label(widget=self, obj_name=f"label_type{self.amount_statements}", text=type_name + ":")
+                update_label(widget=self, obj_name=f"label_type{self.amount_statements}", text=type_name)
+                self.fill_projections(self.possible_projections(collection))
+                update_combo(widget=self, obj_name="combo_projection", enabled=True, items=self.projections,
+                             stditem="Projection: (include)", checkable=True)
 
-    def on_delete(self):
+    def on_find(self):
         statements = {}
         collection = self.objects[f"lw_select1"].item(0).text()
         # clear TBs first
@@ -141,10 +165,7 @@ class WinDelete(QWidget):
         update_textbox(widget=self, obj_name="tb_result", text="")
         try:
             # check for unfilled fields
-            if self.objects[f"combo_delete_option"].currentText() not in ["Delete one", "Delete all"]:
-                update_textbox(widget=self, obj_name="tb_query", text="No delete option selected", color="red")
-                return
-            for i in range(1, self.amount_statements + 1):
+            for i in range(1, self.amount_statements+1):
                 if self.objects[f"lw_select{i}"].count() < 2:
                     update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
                     return
@@ -166,33 +187,21 @@ class WinDelete(QWidget):
             query = q_gen.get_query()
             query_string = q_gen.get_query_string()
             query_string_pretty = q_gen.get_query_string_pretty()
-            distinct = True if self.objects["combo_delete_option"].currentText() == "Delete one" else False
-            if distinct:
-                delete = self.connector.delete_one
-                result = self.connector.find_one(collection=collection, query=query)
-                text = f"db.{collection}.deleteOne({query_string})"
-                text_pretty = f"db.{collection}.deleteOne({query_string_pretty})"
-                found = 1 if len(result) > 0 else 0
-            else:
-                delete = self.connector.delete
-                result = self.connector.find(collection=collection, query=query)
-                text = f"db.{collection}.deleteMany({query_string})"
-                text_pretty = f"db.{collection}.deleteMany({query_string_pretty})"
-                found = len(result)
-            if found == 0:
-                update_textbox(widget=self, obj_name="tb_result", text="Nothing to delete")
-            else:
-                # if records were found, ask for confirmation. After that -> delete or cancel
-                reply = QMessageBox.question(self, "Please Confirm", f"Delete {found} record(s) found?",
-                                             QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel)
-                if reply == QMessageBox.Yes:
-                    deleted = delete(collection=collection, query=query)
-                    self.parent.update_children()
-                    update_textbox(widget=self, obj_name="tb_result", text=f"{deleted} record(s) deleted\n")
-                else:
-                    update_textbox(widget=self, obj_name="tb_result", text=f"Canceled\n")
+            projection = self.__filter_projection(self.projections)
+            projection_pretty = q_gen.prettify(projection)
+            text = f"db.{collection}.find({query_string}, {projection})"
+            text_pretty = f"db.{collection}.find({query_string_pretty}, {projection_pretty})"
+            # do a search operation with prepared query and projection
+            result = self.connector.find(collection=collection, query=query, projection=projection)
             update_textbox(widget=self, obj_name="tb_query", text=text)
             update_textbox(widget=self, obj_name="tb_query_pretty", text=text_pretty)
+            if len(result) == 0:
+                update_textbox(widget=self, obj_name="tb_result", text="No records found")
+            else:
+                update_textbox(widget=self, obj_name="tb_result", text=f"{len(result)} record(s) found:\n")
+                for res in result:
+                    text = q_gen.prettify(res)
+                    self.objects["tb_result"].append(text)
         except json.JSONDecodeError as e:
             update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
         except Exception as e:
@@ -216,16 +225,16 @@ class WinDelete(QWidget):
                 self.rec_fill_subitem(subitem, collection, entries[key], types, i)
                 i = tmp
             else:
-                QTreeWidgetItem(item, [key, types[collection][i + key]])
+                QTreeWidgetItem(item, [key, types[collection][i+key]])
 
     def add_dialog_buttons(self, widget, layout):
         button_add = create_button(widget=widget, obj_name="button_add", text="Add Statement", font=self.font,
-                                   size=[200, 30], pos=[150, widget.height() - 30], enabled=True)
+                                   size=[200, 30], pos=[150, widget.height()-30], enabled=True)
         button_add.clicked.connect(lambda: self.add_statement(widget=widget, start=100 * self.amount_statements,
                                                               layout=layout))
         self.objects[button_add.objectName()] = button_add
         button_del = create_button(widget=widget, obj_name="button_del", text="Remove last Statement", font=self.font,
-                                   size=[200, 30], pos=[350, widget.height() - 30])
+                                   size=[200, 30], pos=[350, widget.height()-30])
         button_del.clicked.connect(lambda: self.remove_last_statement(widget=widget))
         self.objects[button_del.objectName()] = button_del
 
@@ -254,38 +263,38 @@ class WinDelete(QWidget):
                 self.objects[combo_clause.objectName()] = combo_clause
             # label indicator for the select field
             label_select = create_label(widget=widget, obj_name=f"label_select{self.amount_statements}", font=self.font,
-                                        size=[400, 30], pos=[10, start + 1], text="Field:", color="black")
+                                        size=[400, 30], pos=[10, start+1], text="Field:", color="black")
             layout.addWidget(label_select, self.amount_statements, 1, Qt.AlignTop)
             self.objects[label_select.objectName()] = label_select
             # list widget containing the clicked field
             lw_select = create_list(widget=widget, obj_name=f"lw_select{self.amount_statements}", font=self.font,
-                                    size=[200, 30], pos=[10, start + 30], horizontal=True, enabled=True)
+                                    size=[200, 30], pos=[10, start+30], horizontal=True, enabled=True)
             lw_select.setMaximumSize(1000, 26)
             lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
             layout.addWidget(lw_select, self.amount_statements, 2, Qt.AlignTop)
             self.objects[lw_select.objectName()] = lw_select
             # combobox containing all possible options for comparison
             combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.amount_statements}", font=self.font,
-                                        size=[200, 30], pos=[250, start + 30], enabled=True, stditem="Options:",
+                                        size=[200, 30], pos=[250, start+30], enabled=True, stditem="Options:",
                                         items=self.options)
             combo_select.installEventFilter(self)
             layout.addWidget(combo_select, self.amount_statements, 3, Qt.AlignTop)
             self.objects[combo_select.objectName()] = combo_select
             # label indicator for the type of the selected field
             label_type = create_label(widget=widget, obj_name=f"label_type{self.amount_statements}", font=self.font,
-                                      size=[400, 30], pos=[500, start + 30], text="type:", color="black")
+                                      size=[400, 30], pos=[500, start+30], text="", color="black")
             layout.addWidget(label_type, self.amount_statements, 4, Qt.AlignTop)
             self.objects[label_type.objectName()] = label_type
             # inputbox for the comparison string
             ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.amount_statements}", font=self.font,
-                                        size=[200, 30], pos=[570, start + 30], enabled=True)
+                                        size=[200, 30], pos=[570, start+30], enabled=True)
             ib_select.installEventFilter(self)
             layout.addWidget(ib_select, self.amount_statements, 5, Qt.AlignTop)
             self.objects[ib_select.objectName()] = ib_select
-            widget.resize(widget.width(), widget.height() + 100)
+            widget.resize(widget.width(), widget.height()+100)
             enabled = True if self.amount_statements > 1 else False
-            update_button(widget=self, obj_name="button_add", pos=[150, widget.height() - 30])
-            update_button(widget=self, obj_name="button_del", pos=[350, widget.height() - 30], enabled=enabled)
+            update_button(widget=self, obj_name="button_add", pos=[150, widget.height()-30])
+            update_button(widget=self, obj_name="button_del", pos=[350, widget.height()-30], enabled=enabled)
         except Exception as e:
             update_textbox(widget=self, obj_name="tb_query", text=e, color="red")
             self.amount_statements -= 1
@@ -300,7 +309,7 @@ class WinDelete(QWidget):
                          f"combo_clause{self.amount_statements}"]
             self.remove_widgets(to_delete)
             self.amount_statements -= 1
-            widget.resize(widget.width(), widget.height() - 100)
+            widget.resize(widget.width(), widget.height()-100)
             update_button(widget=self, obj_name="button_add", pos=[150, widget.height() - 30])
             enabled = True if self.amount_statements > 1 else False
             update_button(widget=self, obj_name="button_del", pos=[350, widget.height() - 30], enabled=enabled)
@@ -309,3 +318,24 @@ class WinDelete(QWidget):
         for widget in widgets:
             self.objects[widget].setParent(None)
             del self.objects[widget]
+
+    def possible_projections(self, collection):
+        projections = []
+        for key in self.connector.get_collection_entries(collection, distinct=True):
+            projections.append(key)
+        return projections
+
+    def fill_projections(self, projections):
+        self.projections.clear()
+        for projection in projections:
+            self.projections[projection] = 1
+
+    def __filter_projection(self, projections):
+        # cannot do inclusion in exclusion projection and vice versa
+        # filter out included projections (key = 1) and append it to the dict
+        # _id may be in or excluded, so include it every time, despite it's value
+        filtered = {}
+        for key, value in projections.items():
+            if value == 1 or key == '_id':
+                filtered[key.replace("'", '"')] = value
+        return filtered

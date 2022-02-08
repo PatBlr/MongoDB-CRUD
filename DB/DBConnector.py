@@ -1,7 +1,12 @@
-# :author: pbleeker
+"""
+    Copyright (C) 2022, Patrick Bleeker
+    This program comes with ABSOLUTELY NO WARRANTY;
+    See full notice at Main.py
+"""
+
 import pymongo.database
 from pymongo import MongoClient
-import DBExceptions
+from DB import DBExceptions
 
 
 class DBConnector:
@@ -64,6 +69,18 @@ class DBConnector:
         :return: specified collection as Object
         """
         return self.db[collection]
+
+    def get_collection_fields(self, collection: str) -> list:
+        # TODO
+        fields = []
+        cursor = self.get_collection_entries(collection, distinct=True)
+        print(cursor)
+        for doc in cursor:
+            print(doc)
+            for entry in doc.keys():
+                print(entry)
+                fields.append(entry)
+        return fields
 
     def get_collection_entries(self, collection: str, distinct: bool = False) -> pymongo.cursor.Cursor:
         """

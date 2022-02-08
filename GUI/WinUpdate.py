@@ -1,3 +1,9 @@
+"""
+    Copyright (C) 2022, Patrick Bleeker
+    This program comes with ABSOLUTELY NO WARRANTY;
+    See full notice at Main.py
+"""
+
 import json
 from pymongo import errors
 from PyQt5.QtWidgets import (
@@ -8,7 +14,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, QEvent
-from Create import (
+from Utility.Create import (
     create_label,
     update_label,
     create_inputbox,
@@ -23,7 +29,7 @@ from Create import (
     create_tabview,
     create_scrollarea
 )
-from QueryGenerator import QueryGenerator
+from Utility.QueryGenerator import QueryGenerator
 
 
 class WinUpdate(QWidget):
@@ -49,7 +55,7 @@ class WinUpdate(QWidget):
         # create GUI
         # tree with collection->value|type for
         tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
-                           pos=[10, 10], headers=["Name", "Type"], enabled=True)
+                           pos=[10, 10], headers=["Field", "Type"], enabled=True)
         tree.itemDoubleClicked.connect(self.on_item_selected)
         self.objects[tree.objectName()] = tree
 

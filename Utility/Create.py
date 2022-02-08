@@ -1,9 +1,15 @@
+"""
+    Copyright (C) 2022, Patrick Bleeker
+    This program comes with ABSOLUTELY NO WARRANTY;
+    See full notice at Main.py
+"""
+
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QPushButton, QComboBox, QTextBrowser, QTreeWidget, QHeaderView,
                              QListWidget, QTabWidget, QWidget, QScrollArea)
 from PyQt5.QtGui import QStandardItem, QBrush, QColor
 from PyQt5.QtCore import Qt
 
-import DBExceptions
+from DB import DBExceptions
 
 
 def create_label(widget, obj_name, font, text, size, pos, color="black", enabled=True):

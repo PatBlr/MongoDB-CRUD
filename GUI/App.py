@@ -1,12 +1,19 @@
+"""
+    Copyright (C) 2022, Patrick Bleeker
+    This program comes with ABSOLUTELY NO WARRANTY;
+    See full notice at Main.py
+"""
+
+
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QEvent
-import DBExceptions
-# from WinCreate import WinCreate
-from WinRead import WinRead
-from WinUpdate import WinUpdate
-from WinDelete import WinDelete
-from Create import (
+from DB import DBExceptions
+from GUI.WinCreate import WinCreate
+from GUI.WinRead import WinRead
+from GUI.WinUpdate import WinUpdate
+from GUI.WinDelete import WinDelete
+from Utility.Create import (
     create_label,
     update_label,
     create_inputbox,
@@ -16,7 +23,7 @@ from Create import (
     create_tabview,
     update_tabview
 )
-from DBConnector import DBConnector
+from DB.DBConnector import DBConnector
 
 
 class App(QWidget):
@@ -24,8 +31,8 @@ class App(QWidget):
         super().__init__()
         self.width = 1400
         self.height = 810
-        self.resize(self.width, self.height)
-        self.setWindowTitle('MongoDB Query Generator')
+        self.setFixedSize(self.width, self.height)
+        self.setWindowTitle('MongoDB CRUD')
         self.options = [
             "equals",
             "does not equal",
@@ -43,7 +50,7 @@ class App(QWidget):
         self.font = QFont()
         self.font.setPointSize(9)
         self.connector = DBConnector()
-        # self.win_create = None
+        self.win_create = None
         self.win_read = None
         self.win_update = None
         self.win_delete = None
@@ -72,7 +79,7 @@ class App(QWidget):
         tabview = create_tabview(widget=self, obj_name="tabview", size=[self.width, self.height], pos=[0, 100],
                                  tabs=["Create", "Read", "Update", "Delete"], enabled=False, obj_list=self.objects)
         self.objects[tabview.objectName()] = tabview
-        # self.win_create = WinCreate(self.objects["tab_read"], self.connector, self.options)
+        self.win_create = WinCreate(self.objects["tab_create"], self)
         self.win_read = WinRead(self.objects["tab_read"], self)
         self.win_update = WinUpdate(self.objects["tab_update"], self)
         self.win_delete = WinDelete(self.objects["tab_delete"], self)
@@ -117,8 +124,8 @@ class App(QWidget):
             update_label(widget=self, obj_name="label_connect", text=str(e))
 
     def update_children(self):
-        # if self.win_create is not None:
-        #     self.win_create.update_ui()
+        if self.win_create is not None:
+            self.win_create.update_ui()
         if self.win_read is not None:
             self.win_read.update_ui()
         if self.win_update is not None:
