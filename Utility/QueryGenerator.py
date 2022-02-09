@@ -21,8 +21,8 @@ class QueryGenerator:
             "field" (e.g. _id),
             "option" (e.g. equals, does not equal, etc...) and
             "text" (compare string)
-            example: {statement1: {"field": "_id", "option": "equals", "text": "01"}}
-            provided options are: equals, does not equal, grater than, less than, greater or equal, less or equal,
+            Example: {statement1: {"field": "_id", "option": "equals", "text": "01"}}.
+            Provided options are: equals, does not equal, grater than, less than, greater or equal, less or equal,
             in, not in, starts with, ends with, contains
         """
         self.options = {
@@ -215,7 +215,8 @@ class QueryGenerator:
             argument = f"'{argument}'"
         return argument
 
-    def prettify(self, statement, sort_keys: bool = False) -> str:
+    @staticmethod
+    def prettify(statement, sort_keys: bool = False) -> str:
         """
         Will indent a string or a dict if it's json serializable\n
         Will raise Exception if either not a dict or a string or if the statement can't be serialized\n
@@ -229,14 +230,77 @@ class QueryGenerator:
             if isinstance(statement, str):
                 statement = statement.replace("'", '"')
                 statement = json.loads(statement)
-            statement = f"{json.dumps(statement, indent=4, sort_keys=sort_keys, default=self.__json_serial)}"
+            statement = f"{json.dumps(statement, indent=4, sort_keys=sort_keys, default=QueryGenerator.json_serial)}"
             return statement
         except Exception:
             raise
 
-    def __json_serial(self, obj: object) -> str:
+    @staticmethod
+    def json_serial(obj: object) -> str:
         # source: https://stackoverflow.com/questions/11875770/how-to-overcome-datetime-datetime-not-json-serializable
-        """JSON serializer for objects not serializable by default json code"""
+        """
+        JSON serializer for objects not serializable by default json code\n
+        :param obj: object to parse
+        :returns: string format of object
+        """
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
         raise TypeError("Type %s not serializable" % type(obj))
+
+    @staticmethod
+    def get_first_element(string: str) -> str:
+        """
+        Splits up a string seperated by dots. Returns the front most element of this string.
+        :param string: dot seperated string
+        :return: first element as string
+        """
+        elements = string.split(".")
+        return elements[0]
+
+    @staticmethod
+    def remove_first_element(string: str) -> str:
+        """
+        Removes the first element of a dot seperated string. Returns rest of string
+        :param string: dot seperated string
+        :return: string without first element
+        """
+        elements = string.split(".")
+        elements.pop(0)
+        ret = ""
+        for i, element in enumerate(elements):
+            ret += element
+            if i < len(elements) - 1:
+                ret += "."
+        return ret
+
+    @staticmethod
+    def resolve_string_to_dict(string: str) -> dict:
+        """
+        transforms a given string to a dict. If there are dot-seperated keys, they will be transformed into
+        dicts themselves. Example: {key.subkey: foo} -> {key: {subkey: foo}}\n
+        :param string: string in dict format
+        :return: dict version of given string
+        :raises Exception: if given string is no valid dict format
+        """
+        try:
+            d = json.loads(string)
+        except json.decoder.JSONDecodeError as e:
+            raise Exception(f"No valid dict format. Specifically:\n{e}")
+        ret = {}
+        for key, value in d.items():
+            entries = key.split(".")
+            last = entries[-1]
+            if len(entries) > 1:
+                # if there are dot-seperated keys
+                x = ret
+                for i in range(0, len(entries) - 1):
+                    first = QueryGenerator.get_first_element(key)
+                    key = QueryGenerator.remove_first_element(key)
+                    # transform into dicts
+                    if first not in x:
+                        x[first] = {}
+                    x = x[first]
+                x[last] = value
+            else:
+                ret[last] = value
+        return ret
