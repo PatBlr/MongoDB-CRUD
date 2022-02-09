@@ -3,19 +3,23 @@
     This program comes with ABSOLUTELY NO WARRANTY;
     See full notice at Main.py
 """
+import json
 
+import pymongo.errors
 from PyQt5.QtWidgets import (
     QTreeWidgetItem,
     QWidget,
     QGridLayout
 )
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtCore import Qt
+from Utility.QueryGenerator import QueryGenerator
 from Utility.Create import (
     create_label,
     create_inputbox,
     create_button,
     create_textbox,
+    update_textbox,
     create_tree,
     create_tabview,
     create_scrollarea
@@ -28,6 +32,7 @@ class WinCreate(QWidget):
         self.tab = tab
         self.parent = parent
         self.options = self.parent.options
+        self.selected_collection = None
         self.projections = {}
         self.amount_fields = 0
         self.objects = {}
@@ -76,50 +81,61 @@ class WinCreate(QWidget):
         # clear UI
         self.objects["tree"].clear()
         # fill tree
-        types = self.connector.get_types()
-        # add every collection to the tree without a type
+        # add every collection to the tree
         for collection in self.connector.get_list_collections():
             QTreeWidgetItem(self.objects["tree"], [collection, ''])
-
-    def eventFilter(self, target, event):
-        # filter Mousewheel on target - prevents scrolling on combobox
-        if event.type() == QEvent.Wheel:
-            return True
-        return False
 
     def on_item_selected(self, item):
         # pyqtSlot for tree
         self.clear_layout()
-        collection = item.text(0)
-        items = self.connector.get_types()[collection].items()
+        self.selected_collection = item.text(0)
+        items = self.connector.get_types()[self.selected_collection].items()
         self.add_insert_statements(items)
 
     def on_insert(self):
+        # pyqtSlot for insert button
+        if self.selected_collection is None:
+            error = "Please select a collection"
+            self.error_to_tb(error)
+            return
+        if self.amount_fields > 0:
+            string = "{"
+            for i in range(1, self.amount_fields+1):
+                field = self.objects[f"label_field{i}"].text()
+                field_type = self.objects[f"label_type{i}"].text()
+                value = self.objects[f"ib_value{i}"].text()
+                if field_type == "str":
+                    value = f'"{value}"'
+                string += f'"{field}": {value}'
+                if i < self.amount_fields:
+                    string += ", "
+            string += "}"
+            print(string)
+        else:
+            error = "Specify at least one field"
+            self.error_to_tb(error)
+            return
         try:
-            if self.amount_fields > 0:
-                string = "{"
-                for i in range(1, self.amount_fields):
-                    print(i, self.amount_fields)
-                    field = self.objects[f"label_field{i}"].text()
-                    field_type = self.objects[f"label_type{i}"].text()
-                    value = self.objects[f"ib_value{i}"].text()
-                    if len(field.split(".")) > 1:
-                        field = self.split_up(field.split("."))
-                #
-                #     if field_type == "str":
-                #         value = f'"{value}"'
-                #     string += f'"{field}": {value}'
-                #     if i < self.amount_fields-1:
-                #         string += ", "
-                # string += "}"
-                # print(string)
-                # print(json.loads(string))
-        except Exception as e :
-            print(e)
+            resolved_dict = QueryGenerator.resolve_string_to_dict(string)
+            resolved_string = json.dumps(resolved_dict)
+        except Exception as e:
+            self.error_to_tb(e)
+            return
+        try:
+            ids = self.connector.insert_one(self.selected_collection, resolved_dict)
+        except pymongo.errors.DuplicateKeyError as e:
+            self.error_to_tb(e)
+            return
+        text = f"db.{self.selected_collection}.insertOne({resolved_string})"
+        text_pretty = f"db.{self.selected_collection}.insertOne({QueryGenerator.prettify(resolved_string)})"
+        update_textbox(widget=self, obj_name="tb_query", text=text)
+        update_textbox(widget=self, obj_name="tb_query_pretty", text=text_pretty)
+        update_textbox(widget=self, obj_name="tb_result", text=f"inserted following id(s):\n{ids}")
 
-    def split_up(self, text):
-        print(text)
-        return ""
+    def error_to_tb(self, error):
+        update_textbox(widget=self, obj_name="tb_query", text=str(error), color="red")
+        update_textbox(widget=self, obj_name="tb_query_pretty", text="")
+        update_textbox(widget=self, obj_name="tb_result", text=f"")
 
     def add_insert_statements(self, items):
         try:
@@ -155,7 +171,6 @@ class WinCreate(QWidget):
                 self.remove_widgets(to_delete)
                 self.amount_fields -= 1
                 widget.resize(widget.width(), widget.height() - 100)
-            print(self.amount_fields)
         except Exception as e:
             print(e)
 
