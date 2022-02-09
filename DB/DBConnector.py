@@ -5,7 +5,7 @@
 """
 
 import pymongo.database
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 from DB import DBExceptions
 
 
@@ -13,7 +13,7 @@ class DBConnector:
     def __init__(self):
         """
         Can connect to a MongoDB Server by calling the connect() function.\n
-        Provides CRUD operations on the connection
+        Provides CRUD operations
         """
         self.client = None
         self.db = None
@@ -94,9 +94,6 @@ class DBConnector:
             return self.db[collection].find_one()
         return self.db[collection].find()
 
-    def get_dict_entries(self, collection: str, key: str) -> pymongo.cursor.Cursor:
-        return self.db[collection].find_one({}, {key: 1})[key]
-
     def connect(self, db_uri: str) -> None:
         """
         Connects to a Database with given URI\n
@@ -112,6 +109,32 @@ class DBConnector:
         except Exception as e:
             raise DBExceptions.ConnectionFailure(e)
 
+    def insert(self, collection: str, query_list: dict) -> str:
+        """
+        Equivalent to the MomgoDB insertMany() function\n
+        :param collection: String of the collection to insert in
+        :param query_list: List with dicts of statements. Same syntax as the MongoDB equivalent
+        :return: inserted _id fields
+        """
+        try:
+            ret = self.db[collection].insert_many(query_list)
+        except errors.DuplicateKeyError:
+            raise
+        return ret.inserted_ids
+
+    def insert_one(self, collection: str, query: dict) -> str:
+        """
+        Equivalent to the MomgoDB insertOne() function\n
+        :param collection: String of the collection to insert in
+        :param query: Dict of statements. Same syntax as the MongoDB equivalent
+        :return: inserted _id field
+        """
+        try:
+            ret = self.db[collection].insert_one(query)
+        except errors.DuplicateKeyError:
+            raise
+        return ret.inserted_id
+
     def find(self, collection: str, query: dict, projection: dict = None) -> list:
         """
         Equivalent to the MongoDB find() function\n
@@ -123,12 +146,9 @@ class DBConnector:
         ret = []
         if projection is None:
             projection = {}
-        try:
-            result = self.db[collection].find(query, projection)
-            for x in result:
-                ret.append(x)
-        except Exception as e:
-            print(e, "in find")
+        result = self.db[collection].find(query, projection)
+        for x in result:
+            ret.append(x)
         return ret
 
     def find_one(self, collection: str, query: dict, projection: dict = None) -> list:
@@ -142,12 +162,9 @@ class DBConnector:
         ret = []
         if projection is None:
             projection = {}
-        try:
-            result = self.db[collection].find_one(query, projection)
-            for res in result:
-                ret.append(res)
-        except Exception as e:
-            print(e, "in find_one")
+        result = self.db[collection].find_one(query, projection)
+        for res in result:
+            ret.append(res)
         return ret
 
     def update(self, collection: str, query: dict, updates: dict) -> int:
@@ -204,7 +221,7 @@ class DBConnector:
     def set_db(self, db: str) -> None:
         """
         Sets the specified database as the current one\n
-        :param db: database to be set
+        :param db: name of database to be set
         """
         try:
             self.db = self.client[db]
@@ -237,7 +254,7 @@ class DBConnector:
         """
         Recursively search through a document to find keys that have dicts as their value\n
         :param doc: document to search through
-        :param init_string: string to append to - Default is emptry string
+        :param init_string: string to append to - Default is empty string
         :param res: dict to add results to - Default is None, will create an empty dict
         :return: dict of all fields in the document as keys and it's corresponding type as value
         """
