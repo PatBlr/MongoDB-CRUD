@@ -12,11 +12,13 @@ from PyQt5.QtCore import Qt
 from DB import DBExceptions
 
 
-def create_label(widget, obj_name, font, text, size, pos, color="black", enabled=True):
+def create_label(widget, obj_name, font, text, size=None, pos=None, color="black", enabled=True):
     label = QLabel(text, widget)
     label.setObjectName(obj_name)
-    update_pos(label, pos)
-    update_size(label, size)
+    if pos is not None:
+        update_pos(label, pos)
+    if size is not None:
+        update_size(label, size)
     label.setFont(font)
     label.setStyleSheet(f"color: {color};")
     label.setEnabled(enabled)
@@ -41,11 +43,13 @@ def update_label(widget, obj_name, font=None, text=None, size=None, pos=None, co
         label.setStyleSheet(f"color: {color};")
 
 
-def create_inputbox(widget, obj_name, font, size, pos, text=None, color="black", enabled=True):
+def create_inputbox(widget, obj_name, font, size=None, pos=None, text="", color="black", enabled=True):
     ib = QLineEdit(text, widget)
     ib.setObjectName(obj_name)
-    update_pos(ib, pos)
-    update_size(ib, size)
+    if pos is not None:
+        update_pos(ib, pos)
+    if size is not None:
+        update_size(ib, size)
     ib.setFont(font)
     ib.setStyleSheet(f"color: {color}; background-color: white; border-color: black")
     ib.setEnabled(enabled)
@@ -72,11 +76,13 @@ def update_inputbox(widget, obj_name, font=None, text=None, size=None, pos=None,
         ib.setEnabled(enabled)
 
 
-def create_button(widget, obj_name, font, size, pos, text, color="black", enabled=True):
+def create_button(widget, obj_name, font, text, size=None, pos=None, color="black", enabled=True):
     button = QPushButton(text, widget)
     button.setObjectName(obj_name)
-    update_pos(button, pos)
-    update_size(button, size)
+    if pos is not None:
+        update_pos(button, pos)
+    if size is not None:
+        update_size(button, size)
     button.setFont(font)
     button.setStyleSheet(f"color: {color};")
     button.setEnabled(enabled)
@@ -103,13 +109,15 @@ def update_button(widget, obj_name, font=None, size=None, pos=None, text=None, c
         raise e.__type__.__name__(e)
 
 
-def create_combo(widget, obj_name, font, size, pos, color="black", enabled=True, items=None, checkable=False,
+def create_combo(widget, obj_name, font, size=None, pos=None, color="black", enabled=True, items=None, checkable=False,
                  stditem=""):
     combo = QComboBox(widget)
     combo.setObjectName(obj_name)
     combo.setFont(font)
-    update_pos(combo, pos)
-    update_size(combo, size)
+    if pos is not None:
+        update_pos(combo, pos)
+    if size is not None:
+        update_size(combo, size)
     combo.setStyleSheet(f"color: {color}")
     combo.setEnabled(enabled)
     first_item = QStandardItem(stditem)
@@ -230,13 +238,15 @@ def update_tree(widget, obj_name, font=None, size=None, pos=None, headers=None, 
         raise e.__type__.__name__(e)
 
 
-def create_list(widget, obj_name, font, size, pos, color="black", enabled=False, horizontal=False,
+def create_list(widget, obj_name, font, pos=None, size=None, color="black", enabled=False, horizontal=False,
                 scroll_always_on=False):
     lw = QListWidget(widget)
     lw.setObjectName(obj_name)
     lw.setFont(font)
-    update_size(lw, size)
-    update_pos(lw, pos)
+    if pos is not None:
+        update_pos(lw, pos)
+    if size is not None:
+        update_size(lw, size)
     lw.setStyleSheet(f"color: {color};")
     lw.setEnabled(enabled)
     if horizontal:
@@ -282,7 +292,7 @@ def update_list(widget, obj_name, font=None, size=None, pos=None, color=None, en
         raise e.__type__.__name__(e)
 
 
-def create_tabview(widget, obj_name, size, pos, tabs, obj_list,enabled=False):
+def create_tabview(widget, obj_name, size, pos, tabs, obj_list, enabled=False):
     tv = QTabWidget(widget)
     tv.setObjectName(obj_name)
     update_size(tv, size)
