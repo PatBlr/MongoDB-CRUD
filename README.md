@@ -1,9 +1,24 @@
 # MongoDB-Query-Generator
 
 ## Installation :
+
+---
+
+Install Python:
+
+[Download](https://www.python.org/downloads/)
+
 ___
 
-1. Install PyQt5
+Install PyQt5
 ```
-python3 -m pip install PyQt5
+python.exe -m pip install PyQt5
+```
+
+---
+
+Install pymongo
+
+```
+python.exe -m pip install pymongo
 ```
