@@ -3,7 +3,7 @@
     This program comes with ABSOLUTELY NO WARRANTY;
     See full notice at Main.py
 """
-
+import time
 
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QFont
@@ -67,7 +67,7 @@ class App(QWidget):
         button_connect.clicked.connect(self.__on_connect)
         self.objects[button_connect.objectName()] = button_connect
         # display for connection status or errors / warnings
-        label_connected = create_label(widget=self, obj_name="label_connect", font=self.font, size=[500, 30],
+        label_connected = create_label(widget=self, obj_name="label_connect", font=self.font, size=[1000, 30],
                                        pos=[550, 10], text="not connected", color="red")
         self.objects[label_connected.objectName()] = label_connected
         # combobox for databases
@@ -93,11 +93,7 @@ class App(QWidget):
     def __on_connect(self):
         # pyqtSlot for button_connect
         # on click connect to the database with the URI entered in ib_connect
-        db_uri = ""
-        try:
-            db_uri = self.objects["ib_connect"].text()
-        except KeyError as e:
-            print(e)
+        db_uri = self.objects["ib_connect"].text()
         try:
             self.connector.connect(db_uri)
             self.connector.check_connection()
@@ -105,10 +101,12 @@ class App(QWidget):
             update_label(widget=self, obj_name="label_connect", text="connected", color="green")
             update_combo(widget=self, obj_name="combo_dbs", items=self.connector.get_list_dbs(), enabled=True,
                          stditem="Database:")
-        except DBExceptions.ConnectionFailure as e:
-            print(e)
-        except Exception as e:
-            print(e)
+            update_tabview(widget=self, obj_name="tabview", enabled=False)
+        except (DBExceptions.ConnectionFailure, Exception)as e:
+            update_label(widget=self, obj_name="label_connect", text=str(e), color="blue")
+            update_combo(widget=self, obj_name="combo_dbs", items=[], enabled=False, stditem="Database:")
+            update_tabview(widget=self, obj_name="tabview", enabled=False)
+            return
 
     def __on_db_changed(self, value):
         # pyqtSlot for combo_dbs
