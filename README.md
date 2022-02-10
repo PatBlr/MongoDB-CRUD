@@ -18,5 +18,5 @@ python.exe -m pip install PyQt5
 Install pymongo
 
 ```
-python.exe -m pip install PyQt5
+python.exe -m pip install pymongo
 ```
