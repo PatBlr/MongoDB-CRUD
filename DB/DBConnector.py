@@ -40,6 +40,7 @@ class DBConnector:
         Returns a nested dict with the current DB's collection and it's fields with corresponding types\n
         :return: dict with the current DB's collection and it's fields with corresponding types
         """
+        self.update_types()
         return self.types
 
     def get_client(self) -> pymongo.mongo_client.MongoClient:
@@ -60,7 +61,7 @@ class DBConnector:
         Returns a list of all collections in the current database\n
         :return: list of all collections in the current database
         """
-        return self.list_collections
+        return self.db.list_collection_names()
 
     def get_collection(self, collection: str) -> pymongo.collection.Collection:
         """
@@ -69,18 +70,6 @@ class DBConnector:
         :return: specified collection as Object
         """
         return self.db[collection]
-
-    def get_collection_fields(self, collection: str) -> list:
-        # TODO
-        fields = []
-        cursor = self.get_collection_entries(collection, distinct=True)
-        print(cursor)
-        for doc in cursor:
-            print(doc)
-            for entry in doc.keys():
-                print(entry)
-                fields.append(entry)
-        return fields
 
     def get_collection_entries(self, collection: str, distinct: bool = False) -> pymongo.cursor.Cursor:
         """
@@ -147,8 +136,10 @@ class DBConnector:
         if projection is None:
             projection = {}
         result = self.db[collection].find(query, projection)
-        for x in result:
-            ret.append(x)
+        if result is None:
+            return ret
+        for res in result:
+            ret.append(res)
         return ret
 
     def find_one(self, collection: str, query: dict, projection: dict = None) -> list:
@@ -163,6 +154,8 @@ class DBConnector:
         if projection is None:
             projection = {}
         result = self.db[collection].find_one(query, projection)
+        if result is None:
+            return ret
         for res in result:
             ret.append(res)
         return ret
@@ -207,7 +200,19 @@ class DBConnector:
         :return: amount of deleted records
         """
         result = self.db[collection].delete_one(query)
-        return result.deleted_count
+        try:
+            return result.deleted_count
+        except Exception as e:
+            print("hier", e)
+            return 0
+
+    def drop_collection(self, collection: str) -> bool:
+        """
+        Drops the specified collection
+        :param collection: name of collection to be dropped
+        :returns: True if successfully dropped, else False
+        """
+        return self.db[collection].drop()
 
     def check_connection(self) -> None:
         """
@@ -225,7 +230,6 @@ class DBConnector:
         """
         try:
             self.db = self.client[db]
-            self.list_collections = self.db.list_collection_names()
         except Exception as e:
             raise DBExceptions.ConnectionFailure(e)
 
