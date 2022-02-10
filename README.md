@@ -2,8 +2,6 @@
 
 ## Installation :
 
----
-
 Install Python:
 
 [Download](https://www.python.org/downloads/)
@@ -20,5 +18,5 @@ python.exe -m pip install PyQt5
 Install pymongo
 
 ```
-python.exe -m pip install pymongo
+python.exe -m pip install PyQt5
 ```
