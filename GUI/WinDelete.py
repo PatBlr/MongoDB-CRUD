@@ -9,9 +9,11 @@ from PyQt5.QtWidgets import (
     QTreeWidgetItem,
     QWidget,
     QGridLayout,
-    QMessageBox
+    QMessageBox,
+    QMenu,
+    QAction
 )
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QCursor
 from PyQt5.QtCore import Qt, QEvent
 from Utility.Create import (
     create_label,
@@ -40,6 +42,7 @@ class WinDelete(QWidget):
         self.projections = {}
         self.amount_statements = 0
         self.objects = {}
+        self.selected_collection = None
         self.font = QFont()
         self.font.setPointSize(9)
         self.connector = self.parent.connector
@@ -51,6 +54,8 @@ class WinDelete(QWidget):
         tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
                            pos=[10, 10], headers=["Field", "Type"], enabled=True)
         tree.itemDoubleClicked.connect(self.on_item_selected)
+        tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        tree.customContextMenuRequested.connect(self.on_item_right_clicked)
         self.objects[tree.objectName()] = tree
         # scrollarea to add statements and dialog buttons to
         box_statements = QWidget(self.tab)
@@ -137,10 +142,32 @@ class WinDelete(QWidget):
                 update_list(widget=self, obj_name=f"lw_select{self.amount_statements}", clear=True,
                             items=[collection, name])
                 update_label(widget=self, obj_name=f"label_type{self.amount_statements}", text=type_name + ":")
+            self.selected_collection = collection
+
+    def on_item_right_clicked(self, pos):
+        item = self.objects["tree"].itemAt(pos)
+        if item is None:
+            return
+        if item.parent() is not None:
+            return
+        menu = QMenu()
+        drop_collection = QAction("Drop Collection")
+        drop_collection.triggered.connect(lambda: self.on_drop_collection(item.text(0)))
+        menu.addAction(drop_collection)
+        menu.exec_(QCursor.pos())
+
+    def on_drop_collection(self, collection):
+        reply = QMessageBox.warning(self, "Please Confirm", f"Drop collection {collection}?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.connector.drop_collection(collection)
+            self.parent.update_children()
 
     def on_delete(self):
         statements = {}
-        collection = self.objects[f"lw_select1"].item(0).text()
+        if self.selected_collection is None:
+            update_textbox(widget=self, obj_name="tb_query", text="No field selected", color="red")
+            return
         # clear TBs first
         update_textbox(widget=self, obj_name="tb_query", text="")
         update_textbox(widget=self, obj_name="tb_query_pretty", text="")
@@ -175,15 +202,16 @@ class WinDelete(QWidget):
             distinct = True if self.objects["combo_delete_option"].currentText() == "Delete one" else False
             if distinct:
                 delete = self.connector.delete_one
-                result = self.connector.find_one(collection=collection, query=query)
-                text = f"db.{collection}.deleteOne({query_string})"
-                text_pretty = f"db.{collection}.deleteOne({query_string_pretty})"
+                print(self.selected_collection, query)
+                result = self.connector.find_one(collection=self.selected_collection, query=query)
+                text = f"db.{self.selected_collection}.deleteOne({query_string})"
+                text_pretty = f"db.{self.selected_collection}.deleteOne({query_string_pretty})"
                 found = 1 if len(result) > 0 else 0
             else:
                 delete = self.connector.delete
-                result = self.connector.find(collection=collection, query=query)
-                text = f"db.{collection}.deleteMany({query_string})"
-                text_pretty = f"db.{collection}.deleteMany({query_string_pretty})"
+                result = self.connector.find(collection=self.selected_collection, query=query)
+                text = f"db.{self.selected_collection}.deleteMany({query_string})"
+                text_pretty = f"db.{self.selected_collection}.deleteMany({query_string_pretty})"
                 found = len(result)
             if found == 0:
                 update_textbox(widget=self, obj_name="tb_result", text="Nothing to delete")
@@ -192,7 +220,7 @@ class WinDelete(QWidget):
                 reply = QMessageBox.question(self, "Please Confirm", f"Delete {found} record(s) found?",
                                              QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel)
                 if reply == QMessageBox.Yes:
-                    deleted = delete(collection=collection, query=query)
+                    deleted = delete(collection=self.selected_collection, query=query)
                     self.parent.update_children()
                     update_textbox(widget=self, obj_name="tb_result", text=f"{deleted} record(s) deleted\n")
                 else:
@@ -201,8 +229,10 @@ class WinDelete(QWidget):
             update_textbox(widget=self, obj_name="tb_query_pretty", text=text_pretty)
         except json.JSONDecodeError as e:
             update_textbox(widget=self, obj_name="tb_query", text=str(e), color="red")
+            return
         except Exception as e:
             print(e, "in on_find")
+            return
 
     def check_scrollbar(self):
         # can't check visibility by itself, so this is a makeshift solution
@@ -254,37 +284,35 @@ class WinDelete(QWidget):
         try:
             if self.amount_statements > 1:
                 combo_clause = create_combo(widget=widget, obj_name=f"combo_clause{self.amount_statements}",
-                                            font=self.font, size=[0, 0], pos=[0, 0], stditem="Clause:",
-                                            items=["and", "or"], enabled=True)
+                                            font=self.font, stditem="Clause:", items=["and", "or"], enabled=True)
                 layout.addWidget(combo_clause, self.amount_statements, 0, Qt.AlignTop)
                 self.objects[combo_clause.objectName()] = combo_clause
             # label indicator for the select field
             label_select = create_label(widget=widget, obj_name=f"label_select{self.amount_statements}", font=self.font,
-                                        size=[400, 30], pos=[10, start + 1], text="Field:", color="black")
+                                        text="Field:", color="black")
             layout.addWidget(label_select, self.amount_statements, 1, Qt.AlignTop)
             self.objects[label_select.objectName()] = label_select
             # list widget containing the clicked field
             lw_select = create_list(widget=widget, obj_name=f"lw_select{self.amount_statements}", font=self.font,
-                                    size=[200, 30], pos=[10, start + 30], horizontal=True, enabled=True)
+                                    horizontal=True, enabled=True)
             lw_select.setMaximumSize(1000, 26)
             lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
             layout.addWidget(lw_select, self.amount_statements, 2, Qt.AlignTop)
             self.objects[lw_select.objectName()] = lw_select
             # combobox containing all possible options for comparison
             combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.amount_statements}", font=self.font,
-                                        size=[200, 30], pos=[250, start + 30], enabled=True, stditem="Options:",
-                                        items=self.options)
+                                        enabled=True, stditem="Options:", items=self.options)
             combo_select.installEventFilter(self)
             layout.addWidget(combo_select, self.amount_statements, 3, Qt.AlignTop)
             self.objects[combo_select.objectName()] = combo_select
             # label indicator for the type of the selected field
             label_type = create_label(widget=widget, obj_name=f"label_type{self.amount_statements}", font=self.font,
-                                      size=[400, 30], pos=[500, start + 30], text="type:", color="black")
+                                      text="type:", color="black")
             layout.addWidget(label_type, self.amount_statements, 4, Qt.AlignTop)
             self.objects[label_type.objectName()] = label_type
             # inputbox for the comparison string
             ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.amount_statements}", font=self.font,
-                                        size=[200, 30], pos=[570, start + 30], enabled=True)
+                                        enabled=True)
             ib_select.installEventFilter(self)
             layout.addWidget(ib_select, self.amount_statements, 5, Qt.AlignTop)
             self.objects[ib_select.objectName()] = ib_select

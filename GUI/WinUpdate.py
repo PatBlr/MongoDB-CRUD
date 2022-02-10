@@ -10,9 +10,11 @@ from PyQt5.QtWidgets import (
     QTreeWidgetItem,
     QWidget,
     QGridLayout,
-    QMessageBox
+    QMessageBox,
+    QMenu,
+    QAction
 )
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QCursor
 from PyQt5.QtCore import Qt, QEvent
 from Utility.Create import (
     create_label,
@@ -57,8 +59,10 @@ class WinUpdate(QWidget):
         tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
                            pos=[10, 10], headers=["Field", "Type"], enabled=True)
         tree.itemDoubleClicked.connect(self.on_item_selected)
+        tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        tree.customContextMenuRequested.connect(self.on_item_right_clicked)
         self.objects[tree.objectName()] = tree
-
+        # tabview
         tabview_statements = create_tabview(widget=self.tab, obj_name="tabview_statements", size=[800, 250],
                                             pos=[550, 10], tabs=["Statements", "Update"], obj_list=self.objects,
                                             enabled=True)
@@ -173,6 +177,25 @@ class WinUpdate(QWidget):
                 update_list(widget=self, obj_name=lw.objectName(), clear=True,
                             items=[collection, name])
                 update_label(widget=self, obj_name=label.objectName(), text=type_name + ":")
+
+    def on_item_right_clicked(self, pos):
+        item = self.objects["tree"].itemAt(pos)
+        if item is None:
+            return
+        if item.parent() is not None:
+            return
+        menu = QMenu()
+        drop_collection = QAction("Drop Collection")
+        drop_collection.triggered.connect(lambda: self.on_drop_collection(item.text(0)))
+        menu.addAction(drop_collection)
+        menu.exec_(QCursor.pos())
+
+    def on_drop_collection(self, collection):
+        reply = QMessageBox.warning(self, "Please Confirm", f"Drop collection {collection}?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.connector.drop_collection(collection)
+            self.parent.update_children()
 
     def on_update(self):
         statements = {}

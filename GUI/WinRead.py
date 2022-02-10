@@ -8,10 +8,13 @@ import json
 from PyQt5.QtWidgets import (
     QTreeWidgetItem,
     QWidget,
-    QGridLayout
+    QGridLayout,
+    QMenu,
+    QAction,
+    QMessageBox
 )
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt, QEvent
+from PyQt5.QtGui import QFont, QCursor
+from PyQt5.QtCore import Qt, QEvent, QPoint
 from Utility.Create import (
     create_label,
     update_label,
@@ -51,6 +54,8 @@ class WinRead(QWidget):
         tree = create_tree(widget=self.tab, obj_name="tree", font=self.font, size=[500, 670],
                            pos=[10, 10], headers=["Field", "Type"], enabled=True)
         tree.itemDoubleClicked.connect(self.on_item_selected)
+        tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        tree.customContextMenuRequested.connect(self.on_item_right_clicked)
         self.objects[tree.objectName()] = tree
         # scrollarea to hold the statements
         box_statements = QWidget(self.tab)
@@ -128,6 +133,25 @@ class WinRead(QWidget):
             else:
                 self.projections[item.text()] = 1
                 item.setCheckState(Qt.Checked)
+
+    def on_item_right_clicked(self, pos):
+        item = self.objects["tree"].itemAt(pos)
+        if item is None:
+            return
+        if item.parent() is not None:
+            return
+        menu = QMenu()
+        drop_collection = QAction("Drop Collection")
+        drop_collection.triggered.connect(lambda: self.on_drop_collection(item.text(0)))
+        menu.addAction(drop_collection)
+        menu.exec_(QCursor.pos())
+
+    def on_drop_collection(self, collection):
+        reply = QMessageBox.warning(self, "Please Confirm", f"Drop collection {collection}?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.connector.drop_collection(collection)
+            self.parent.update_children()
 
     def on_item_selected(self, item):
         # pyqtSlot for tree
@@ -257,26 +281,24 @@ class WinRead(QWidget):
         try:
             if self.amount_statements > 1:
                 combo_clause = create_combo(widget=widget, obj_name=f"combo_clause{self.amount_statements}",
-                                            font=self.font, size=[0, 0], pos=[0, 0], stditem="Clause:",
-                                            items=["and", "or"], enabled=True)
+                                            font=self.font, stditem="Clause:", items=["and", "or"], enabled=True)
                 layout.addWidget(combo_clause, self.amount_statements, 0, Qt.AlignTop)
                 self.objects[combo_clause.objectName()] = combo_clause
             # label indicator for the select field
             label_select = create_label(widget=widget, obj_name=f"label_select{self.amount_statements}", font=self.font,
-                                        size=[400, 30], pos=[10, start+1], text="Field:", color="black")
+                                        text="Field:", color="black")
             layout.addWidget(label_select, self.amount_statements, 1, Qt.AlignTop)
             self.objects[label_select.objectName()] = label_select
             # list widget containing the clicked field
             lw_select = create_list(widget=widget, obj_name=f"lw_select{self.amount_statements}", font=self.font,
-                                    size=[200, 30], pos=[10, start+30], horizontal=True, enabled=True)
+                                    horizontal=True, enabled=True)
             lw_select.setMaximumSize(1000, 26)
             lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
             layout.addWidget(lw_select, self.amount_statements, 2, Qt.AlignTop)
             self.objects[lw_select.objectName()] = lw_select
             # combobox containing all possible options for comparison
             combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.amount_statements}", font=self.font,
-                                        size=[200, 30], pos=[250, start+30], enabled=True, stditem="Options:",
-                                        items=self.options)
+                                        enabled=True, stditem="Options:", items=self.options)
             combo_select.installEventFilter(self)
             layout.addWidget(combo_select, self.amount_statements, 3, Qt.AlignTop)
             self.objects[combo_select.objectName()] = combo_select
