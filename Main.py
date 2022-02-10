@@ -20,10 +20,10 @@ from GUI.App import App
 
 
 def main():
-    app = QApplication(sys.argv)
-    demo = App()
-    demo.show()
-    sys.exit(app.exec_())
+    system = QApplication(sys.argv)
+    app = App()
+    app.show()
+    sys.exit(system.exec_())
 
 
 if __name__ == "__main__":
