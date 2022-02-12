@@ -3,7 +3,6 @@
     This program comes with ABSOLUTELY NO WARRANTY;
     See full notice at Main.py
 """
-import time
 
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QFont

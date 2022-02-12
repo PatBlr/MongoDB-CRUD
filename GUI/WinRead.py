@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QMessageBox
 )
 from PyQt5.QtGui import QFont, QCursor
-from PyQt5.QtCore import Qt, QEvent, QPoint
+from PyQt5.QtCore import Qt, QEvent
 from Utility.Create import (
     create_label,
     update_label,
