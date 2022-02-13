@@ -129,3 +129,6 @@ class App(QWidget):
             self.win_update.update_ui()
         if self.win_delete is not None:
             self.win_delete.update_ui()
+
+    def closeEvent(self, event):
+        self.connector.close()
