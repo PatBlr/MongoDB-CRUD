@@ -5,7 +5,7 @@
 """
 
 import pymongo.database
-from pymongo import MongoClient, errors
+from pymongo import MongoClient
 from DB import DBExceptions
 
 
@@ -23,10 +23,14 @@ class DBConnector:
 
     def close(self) -> None:
         """
-        Closes connection if one exists
+        Closes connection if one exists\n
+        :raises Exception: Exception thrown by pymongo close()
         """
         if self.client is not None:
-            self.client.close()
+            try:
+                self.client.close()
+            except Exception:
+                raise
 
     def get_db(self) -> pymongo.database.Database:
         """
@@ -78,10 +82,14 @@ class DBConnector:
         :param collection: name of the collection to search through
         :param distinct: specify if just one result should be shown
         :return: cursor to the search result as object
+        :raises Exception: Exception thrown by pymongo find()
         """
-        if distinct:
-            return self.db[collection].find_one()
-        return self.db[collection].find()
+        try:
+            if distinct:
+                return self.db[collection].find_one()
+            return self.db[collection].find()
+        except Exception:
+            raise
 
     def connect(self, db_uri: str) -> None:
         """
@@ -104,10 +112,11 @@ class DBConnector:
         :param collection: String of the collection to insert in
         :param query_list: List with dicts of statements. Same syntax as the MongoDB equivalent
         :return: inserted _id fields
+        :raises Exception: Exception thrown by pymongo insert_many()
         """
         try:
             ret = self.db[collection].insert_many(query_list)
-        except errors.DuplicateKeyError:
+        except Exception:
             raise
         return ret.inserted_ids
 
@@ -117,10 +126,11 @@ class DBConnector:
         :param collection: String of the collection to insert in
         :param query: Dict of statements. Same syntax as the MongoDB equivalent
         :return: inserted _id field
+        :raises Exception: Exception thrown by pymongo insert_one()
         """
         try:
             ret = self.db[collection].insert_one(query)
-        except errors.DuplicateKeyError:
+        except Exception:
             raise
         return ret.inserted_id
 
@@ -131,11 +141,15 @@ class DBConnector:
         :param query: Dict of statements. Same syntax as the MongoDB equivalent
         :param projection: Dict of projections - inclusion OR exclusion only - only _id might be ex- and/or included
         :return: list of results - each result is a dict
+        :raises Exception: Exception thrown by pymongo find()
         """
         ret = []
         if projection is None:
             projection = {}
-        result = self.db[collection].find(query, projection)
+        try:
+            result = self.db[collection].find(query, projection)
+        except Exception:
+            raise
         if result is None:
             return ret
         for res in result:
@@ -149,11 +163,15 @@ class DBConnector:
         :param query: Dict of statements. Same syntax as the MongoDB equivalent
         :param projection: Dict of projections - inclusion OR exclusion only - only _id might be ex- and/or included
         :return: list containing first found entry as dict
+        :raises Exception: Exception thrown by pymongo find_one()
         """
         ret = []
         if projection is None:
             projection = {}
-        result = self.db[collection].find_one(query, projection)
+        try:
+            result = self.db[collection].find_one(query, projection)
+        except Exception:
+            raise
         if result is None:
             return ret
         for res in result:
@@ -167,8 +185,12 @@ class DBConnector:
         :param query: Dict of statements. Same syntax as the MongoDB equivalent
         :param updates: Dict of updates. Same syntax as the MongoDB equivalent
         :return: amount of updated records
+        :raises Exception: Exception thrown by pymongo update_many()
         """
-        result = self.db[collection].update_many(query, updates)
+        try:
+            result = self.db[collection].update_many(query, updates)
+        except Exception:
+            raise
         return result.modified_count
 
     def update_one(self, collection: str, query: dict, updates: dict) -> int:
@@ -178,8 +200,12 @@ class DBConnector:
         :param query: Dict of statements. Same syntax as the MongoDB equivalent
         :param updates:
         :return: amount of updated records
+        :raises Exception: Exception thrown by pymongo update_one()
         """
-        result = self.db[collection].update_one(query, updates)
+        try:
+            result = self.db[collection].update_one(query, updates)
+        except Exception:
+            raise
         return result.modified_count
 
     def delete(self, collection: str, query: dict) -> int:
@@ -188,8 +214,12 @@ class DBConnector:
         :param collection: String of the collection to delete in
         :param query: Dict of statements. Same syntax as the MongoDB equivalent
         :return: amount of deleted records
+        :raises Exception: Exception thrown by pymongo delete_many()
         """
-        result = self.db[collection].delete_many(query)
+        try:
+            result = self.db[collection].delete_many(query)
+        except Exception:
+            raise
         return result.deleted_count
 
     def delete_one(self, collection: str, query: dict) -> int:
@@ -198,21 +228,25 @@ class DBConnector:
         :param collection: String of the collection to delete in
         :param query: Dict of statements. Same syntax as the MongoDB equivalent
         :return: amount of deleted records
+        :raises Exception: Exception thrown by pymongo delete_one()
         """
-        result = self.db[collection].delete_one(query)
         try:
-            return result.deleted_count
-        except Exception as e:
-            print("hier", e)
-            return 0
+            result = self.db[collection].delete_one(query)
+        except Exception:
+            raise
+        return result.deleted_count
 
     def drop_collection(self, collection: str) -> bool:
         """
         Drops the specified collection
         :param collection: name of collection to be dropped
         :returns: True if successfully dropped, else False
+        :raises Exception: Exception thrown by pymongo drop()
         """
-        return self.db[collection].drop()
+        try:
+            return self.db[collection].drop()
+        except Exception:
+            raise
 
     def check_connection(self) -> None:
         """
@@ -227,6 +261,7 @@ class DBConnector:
         """
         Sets the specified database as the current one\n
         :param db: name of database to be set
+        :raises DBExceptions.ConnectionFailure: if no connection is established
         """
         try:
             self.db = self.client[db]
