@@ -280,7 +280,6 @@ class DBConnector:
             # fill new dict with field name and type of field as string
             if doc is not None:
                 for key in doc:
-                    # TODO:
                     # doc[key] is the actual field in the document, key is just the name
                     self.types[f"{collection}"][f"{key}"] = f"{type(doc[key]).__name__}"
                     # if key is a dict: add sub-items to self.types with dot Notation
