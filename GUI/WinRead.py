@@ -65,7 +65,7 @@ class WinRead(QWidget):
         box_layout = QGridLayout(box_statements)
         create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
         self.add_dialog_buttons(widget=box_statements, layout=box_layout)
-        self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
+        self.add_statement(widget=box_statements, layout=box_layout)
         # combobox for the projections
         combo_projection = create_combo(widget=self.tab, obj_name="combo_projection", font=self.font,
                                         size=[200, 30], pos=[550, 280], enabled=True, checkable=True,
@@ -254,15 +254,14 @@ class WinRead(QWidget):
     def add_dialog_buttons(self, widget, layout):
         button_add = create_button(widget=widget, obj_name="button_add", text="Add Statement", font=self.font,
                                    size=[200, 30], pos=[150, widget.height()-30], enabled=True)
-        button_add.clicked.connect(lambda: self.add_statement(widget=widget, start=100 * self.amount_statements,
-                                                              layout=layout))
+        button_add.clicked.connect(lambda: self.add_statement(widget=widget, layout=layout))
         self.objects[button_add.objectName()] = button_add
         button_del = create_button(widget=widget, obj_name="button_del", text="Remove last Statement", font=self.font,
                                    size=[200, 30], pos=[350, widget.height()-30])
         button_del.clicked.connect(lambda: self.remove_last_statement(widget=widget))
         self.objects[button_del.objectName()] = button_del
 
-    def add_statement(self, widget, start, layout):
+    def add_statement(self, widget, layout):
         if self.amount_statements > 0:
             if self.objects[f"lw_select{self.amount_statements}"].count() == 0:
                 error = "Please specify Field before adding new and / or Statement"
@@ -304,12 +303,12 @@ class WinRead(QWidget):
             self.objects[combo_select.objectName()] = combo_select
             # label indicator for the type of the selected field
             label_type = create_label(widget=widget, obj_name=f"label_type{self.amount_statements}", font=self.font,
-                                      size=[400, 30], pos=[500, start+30], text="", color="black")
+                                      text="", color="black")
             layout.addWidget(label_type, self.amount_statements, 4, Qt.AlignTop)
             self.objects[label_type.objectName()] = label_type
             # inputbox for the comparison string
             ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.amount_statements}", font=self.font,
-                                        size=[200, 30], pos=[570, start+30], enabled=True)
+                                        enabled=True)
             ib_select.installEventFilter(self)
             layout.addWidget(ib_select, self.amount_statements, 5, Qt.AlignTop)
             self.objects[ib_select.objectName()] = ib_select

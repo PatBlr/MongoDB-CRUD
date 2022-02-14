@@ -65,7 +65,7 @@ class WinDelete(QWidget):
         box_layout = QGridLayout(box_statements)
         create_scrollarea(widget=self.tab, child=box_statements, size=[800, 250], pos=[550, 10])
         self.add_dialog_buttons(widget=box_statements, layout=box_layout)
-        self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
+        self.add_statement(widget=box_statements, layout=box_layout)
         # combobox to choose the delete option
         combo_delete_option = create_combo(widget=self.tab, obj_name="combo_delete_option", font=self.font,
                                            size=[200, 30], pos=[550, 280], enabled=True, stditem="Delete:",
@@ -257,15 +257,14 @@ class WinDelete(QWidget):
     def add_dialog_buttons(self, widget, layout):
         button_add = create_button(widget=widget, obj_name="button_add", text="Add Statement", font=self.font,
                                    size=[200, 30], pos=[150, widget.height() - 30], enabled=True)
-        button_add.clicked.connect(lambda: self.add_statement(widget=widget, start=100 * self.amount_statements,
-                                                              layout=layout))
+        button_add.clicked.connect(lambda: self.add_statement(widget=widget, layout=layout))
         self.objects[button_add.objectName()] = button_add
         button_del = create_button(widget=widget, obj_name="button_del", text="Remove last Statement", font=self.font,
                                    size=[200, 30], pos=[350, widget.height() - 30])
         button_del.clicked.connect(lambda: self.remove_last_statement(widget=widget))
         self.objects[button_del.objectName()] = button_del
 
-    def add_statement(self, widget, start, layout):
+    def add_statement(self, widget, layout):
         if self.amount_statements > 0:
             if self.objects[f"lw_select{self.amount_statements}"].count() == 0:
                 error = "Please specify Field before adding new and / or Statement"

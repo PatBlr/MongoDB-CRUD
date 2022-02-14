@@ -75,7 +75,7 @@ class WinUpdate(QWidget):
         box_layout = QGridLayout(box_statements)
         create_scrollarea(widget=self.objects["tab_statements"], child=box_statements, size=[800, 222], pos=[0, 0])
         self.add_dialog_buttons(widget=box_statements, layout=box_layout)
-        self.add_statement(widget=box_statements, start=100 * self.amount_statements, layout=box_layout)
+        self.add_statement(widget=box_statements, layout=box_layout)
         # scrollarea to add the updates to
         box_updates = QWidget(self.objects["tab_update"])
         box_updates.resize(770, 0)
@@ -85,7 +85,7 @@ class WinUpdate(QWidget):
         create_scrollarea(widget=self.objects["tab_update"], child=box_updates, size=[800, 222],
                           pos=[0, 0])
         self.add_update_buttons(widget=box_updates, layout=box_layout_update)
-        self.add_update(widget=box_updates, start=100 * self.amount_updates, layout=box_layout_update)
+        self.add_update(widget=box_updates, layout=box_layout_update)
         # combobox to choose the update option
         combo_update_option = create_combo(widget=self.tab, obj_name="combo_update_option", font=self.font,
                                            size=[200, 30], pos=[550, 280], enabled=True, stditem="Update:",
@@ -310,8 +310,7 @@ class WinUpdate(QWidget):
     def add_dialog_buttons(self, widget, layout):
         button_add = create_button(widget=widget, obj_name="button_add", text="Add Statement", font=self.font,
                                    size=[200, 30], pos=[150, widget.height() - 30], enabled=True)
-        button_add.clicked.connect(lambda: self.add_statement(widget=widget, start=100 * self.amount_statements,
-                                                              layout=layout))
+        button_add.clicked.connect(lambda: self.add_statement(widget=widget, layout=layout))
         self.objects[button_add.objectName()] = button_add
         button_del = create_button(widget=widget, obj_name="button_del", text="Remove last Statement", font=self.font,
                                    size=[200, 30], pos=[350, widget.height() - 30])
@@ -321,15 +320,14 @@ class WinUpdate(QWidget):
     def add_update_buttons(self, widget, layout):
         button_add = create_button(widget=widget, obj_name="button_add_update", text="Add Update", font=self.font,
                                    size=[200, 30], pos=[150, widget.height() - 30], enabled=True)
-        button_add.clicked.connect(lambda: self.add_update(widget=widget, start=100 * self.amount_updates,
-                                                           layout=layout))
+        button_add.clicked.connect(lambda: self.add_update(widget=widget, layout=layout))
         self.objects[button_add.objectName()] = button_add
         button_del = create_button(widget=widget, obj_name="button_del_update", text="Remove last Update", 
                                    font=self.font, size=[200, 30], pos=[350, widget.height() - 30])
         button_del.clicked.connect(lambda: self.remove_last_update(widget=widget))
         self.objects[button_del.objectName()] = button_del
 
-    def add_statement(self, widget, start, layout):
+    def add_statement(self, widget, layout):
         if self.amount_statements > 0:
             if self.objects[f"lw_select{self.amount_statements}"].count() == 0:
                 error = "Please specify Field before adding new and / or Statement"
@@ -348,37 +346,36 @@ class WinUpdate(QWidget):
         try:
             if self.amount_statements > 1:
                 combo_clause = create_combo(widget=widget, obj_name=f"combo_clause{self.amount_statements}",
-                                            font=self.font, size=[0, 0], pos=[0, 0], stditem="Clause:",
+                                            font=self.font, stditem="Clause:",
                                             items=["and", "or"], enabled=True)
                 layout.addWidget(combo_clause, self.amount_statements, 0, Qt.AlignTop)
                 self.objects[combo_clause.objectName()] = combo_clause
             # label indicator for the select field
             label_select = create_label(widget=widget, obj_name=f"label_select{self.amount_statements}", font=self.font,
-                                        size=[400, 30], pos=[10, start + 1], text="Field:", color="black")
+                                        text="Field:", color="black")
             layout.addWidget(label_select, self.amount_statements, 1, Qt.AlignTop)
             self.objects[label_select.objectName()] = label_select
             # list widget containing the clicked field
             lw_select = create_list(widget=widget, obj_name=f"lw_select{self.amount_statements}", font=self.font,
-                                    size=[200, 30], pos=[10, start + 30], horizontal=True, enabled=True)
+                                    horizontal=True, enabled=True)
             lw_select.setMaximumSize(1000, 26)
             lw_select.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
             layout.addWidget(lw_select, self.amount_statements, 2, Qt.AlignTop)
             self.objects[lw_select.objectName()] = lw_select
             # combobox containing all possible options for comparison
             combo_select = create_combo(widget=widget, obj_name=f"combo_select{self.amount_statements}", font=self.font,
-                                        size=[200, 30], pos=[250, start + 30], enabled=True, stditem="Options:",
-                                        items=self.options)
+                                        enabled=True, stditem="Options:", items=self.options)
             combo_select.installEventFilter(self)
             layout.addWidget(combo_select, self.amount_statements, 3, Qt.AlignTop)
             self.objects[combo_select.objectName()] = combo_select
             # label indicator for the type of the selected field
             label_type = create_label(widget=widget, obj_name=f"label_type{self.amount_statements}", font=self.font,
-                                      size=[400, 30], pos=[500, start + 30], text="type:", color="black")
+                                      text="type:", color="black")
             layout.addWidget(label_type, self.amount_statements, 4, Qt.AlignTop)
             self.objects[label_type.objectName()] = label_type
             # inputbox for the comparison string
             ib_select = create_inputbox(widget=widget, obj_name=f"ib_select{self.amount_statements}", font=self.font,
-                                        size=[200, 30], pos=[570, start + 30], enabled=True)
+                                        enabled=True)
             ib_select.installEventFilter(self)
             layout.addWidget(ib_select, self.amount_statements, 5, Qt.AlignTop)
             self.objects[ib_select.objectName()] = ib_select
@@ -390,7 +387,7 @@ class WinUpdate(QWidget):
             update_textbox(widget=self, obj_name="tb_query", text=e, color="red")
             self.amount_statements -= 1
             
-    def add_update(self, widget, start, layout):
+    def add_update(self, widget, layout):
         if self.amount_updates > 0:
             if self.objects[f"lw_update{self.amount_updates}"].count() == 0:
                 error = "Please specify Field before adding new field to update"
@@ -400,12 +397,12 @@ class WinUpdate(QWidget):
         try:
             # label indicator for the update field
             label_update = create_label(widget=widget, obj_name=f"label_update{self.amount_updates}", font=self.font,
-                                        size=[400, 30], pos=[10, start + 1], text="Field:", color="black")
+                                        text="Field:", color="black")
             layout.addWidget(label_update, self.amount_updates, 1, Qt.AlignTop)
             self.objects[label_update.objectName()] = label_update
             # list widget containing the clicked field
             lw_update = create_list(widget=widget, obj_name=f"lw_update{self.amount_updates}", font=self.font,
-                                    size=[200, 30], pos=[10, start + 30], horizontal=True, enabled=True)
+                                    horizontal=True, enabled=True)
             lw_update.setMaximumSize(1000, 26)
             lw_update.horizontalScrollBar().rangeChanged.connect(self.check_scrollbar)
             layout.addWidget(lw_update, self.amount_updates, 2, Qt.AlignTop)
@@ -413,13 +410,12 @@ class WinUpdate(QWidget):
 
             # label indicator for the type of the selected field
             label_type_update = create_label(widget=widget, obj_name=f"label_type_update{self.amount_updates}",
-                                             font=self.font, size=[400, 30], pos=[500, start + 30], text="",
-                                             color="black")
+                                             font=self.font, text="", color="black")
             layout.addWidget(label_type_update, self.amount_updates, 4, Qt.AlignTop)
             self.objects[label_type_update.objectName()] = label_type_update
             # inputbox for the comparison string
             ib_update = create_inputbox(widget=widget, obj_name=f"ib_update{self.amount_updates}", font=self.font,
-                                        size=[200, 30], pos=[570, start + 30], enabled=True)
+                                        enabled=True)
             ib_update.installEventFilter(self)
             layout.addWidget(ib_update, self.amount_updates, 5, Qt.AlignTop)
             self.objects[ib_update.objectName()] = ib_update
